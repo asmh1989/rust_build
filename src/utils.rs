@@ -1,14 +1,19 @@
 use git2::Repository;
-use git2::{Cred, Error, RemoteCallbacks};
+use git2::{Cred, RemoteCallbacks};
 use std::env;
+use std::fs::{remove_dir_all, File};
 use std::path::Path;
 
 /// git clone 代码
-pub fn clone_src(url: &str, path: &str) -> Result<Repository, Error> {
+pub fn clone_src(url: &str, path: &str) -> Result<(), String> {
     if url.starts_with("http") {
         println!("start clone {} to {}", url, path);
 
-        Repository::clone(url, path)
+        let result = Repository::clone(url, path);
+        match result {
+            Ok(_) => Ok(()),
+            Err(error) => Err(error.message().to_string()),
+        }
     } else {
         println!("start ssh clone {} to {}", url, path);
         // Prepare callbacks.
@@ -31,24 +36,30 @@ pub fn clone_src(url: &str, path: &str) -> Result<Repository, Error> {
         builder.fetch_options(fo);
 
         // Clone the project.
-        builder.clone(url, Path::new(path))
+        let ressult = builder.clone(url, Path::new(path));
+        match ressult {
+            Ok(_) => Ok(()),
+            Err(error) => Err(error.message().to_string()),
+        }
+    }
+}
+
+pub fn remove_dir(name: &str) {
+    let f = File::open(name);
+
+    if let Ok(_) = f {
+        remove_dir_all(name).expect("删除文件失败");
+        println!("delete {} success", name);
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use std::fs::{remove_dir_all, File};
-
     #[test]
     fn http_clone() {
         let name = "/tmp/okhttp4_demo";
 
-        let f = File::open(name);
-
-        if let Ok(_) = f {
-            remove_dir_all(name).expect("删除文件失败");
-            println!("delete {} success", name);
-        }
+        super::remove_dir(name);
 
         let result = super::clone_src("https://github.com/asmh1989/okhttp4_demo.git", name);
 
@@ -59,12 +70,7 @@ mod tests {
     fn ssh_clone() {
         let name = "/tmp/okhttp4_demo";
 
-        let f = File::open(name);
-
-        if let Ok(_) = f {
-            remove_dir_all(name).expect("删除文件失败");
-            println!("delete {} success", name);
-        }
+        super::remove_dir(name);
 
         let result = super::clone_src("git@github.com:asmh1989/okhttp4_demo.git", name);
 

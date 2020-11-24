@@ -1,5 +1,7 @@
+use bson::{Bson, DateTime};
 use serde::{Deserialize, Serialize};
 use url::Url;
+use uuid::Uuid;
 
 use std::collections::HashMap;
 
@@ -73,6 +75,72 @@ pub struct BuildParams {
     pub email: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub response_url: Option<Url>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BuildStatus {
+    pub code: i8,
+    pub msg: String,
+}
+
+impl BuildStatus {
+    pub fn success() -> Self {
+        BuildStatus {
+            code: 0,
+            msg: String::from("打包成功"),
+        }
+    }
+
+    pub fn failed(msg: String) -> Self {
+        BuildStatus { code: 1, msg }
+    }
+
+    pub fn waiting() -> Self {
+        BuildStatus {
+            code: 2,
+            msg: String::from("等待中"),
+        }
+    }
+
+    pub fn building() -> Self {
+        Self {
+            code: 3,
+            msg: String::from("编译中"),
+        }
+    }
+
+    pub fn illegal() -> Self {
+        BuildStatus {
+            code: -1,
+            msg: String::from("非法id"),
+        }
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AppParams {
+    pub date: DateTime,
+    pub build_id: Uuid,
+    #[serde(flatten)]
+    pub status: BuildStatus,
+    pub params: BuildParams,
+    pub build_time: u16,
+    pub fid: Option<String>,
+    pub operate: String,
+}
+
+impl AppParams {
+    pub fn new(params: BuildParams, operate: &str) -> Self {
+        Self {
+            date: DateTime(chrono::Utc::now()),
+            build_id: Uuid::new_v4(),
+            status: BuildStatus::waiting(),
+            params: params,
+            build_time: 0,
+            fid: None,
+            operate: String::from(operate),
+        }
+    }
 }
 
 #[cfg(test)]

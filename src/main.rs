@@ -2,9 +2,9 @@ use build_params::BuildParams;
 use serde_json::Result;
 
 mod build_params;
+mod config;
 mod utils;
 mod work;
-mod config;
 
 fn typed_example() -> Result<BuildParams> {
     // Some JSON input data as a &str. Maybe this comes from the user.
@@ -47,6 +47,12 @@ fn typed_example() -> Result<BuildParams> {
     Ok(p)
 }
 fn main() {
+    // 修改config
+    // config::Config::get_instance()
+    // .lock()
+    // .unwrap()
+    // .set_cache_home("/tmp");
+
     let result = typed_example();
 
     if let Err(e) = result {
