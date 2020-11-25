@@ -1,4 +1,4 @@
-use std::process::Command;
+use std::{collections::HashMap, process::Command};
 
 use log::info;
 use uuid::Uuid;
@@ -17,17 +17,22 @@ pub fn get_log_file(build_id: Uuid) -> String {
     let path = config::Config::cache_home();
     if !utils::file_exist(&(path.clone() + "/logs")) {
         let _r = Command::new("mkdir")
-            .args(&["+p", &(path.clone() + "/logs")])
+            .args(&["-p", &(path.clone() + "/logs")])
             .output();
     }
     path + "/logs/" + &build_id.to_string() + ".txt"
 }
 
-pub fn get_source(app: &AppParams) -> Result<(), String> {
+pub fn fetch_source(app: &AppParams) -> Result<(), String> {
     let url = app.params.version.source_url.clone();
 
     if Scm::Git == app.params.version.scm {
-        utils::clone_src(url.as_str(), &get_source_path(app.build_id))
+        utils::clone_src(
+            url.as_str(),
+            &get_source_path(app.build_id),
+            app.params.version.branch.clone(),
+            app.params.version.revision.clone(),
+        )
     } else {
         Err("不支持的scm".to_string())
     }
@@ -53,13 +58,32 @@ pub fn release_build(app: &AppParams) -> Result<(), String> {
     Ok(())
 }
 
-pub fn start(_params: BuildParams) {}
+pub fn change_android_manifest(app: &AppParams) -> Result<(), String> {
+    let source = get_source_path(app.build_id);
+    let android_manifest_xml = source + "/app/src/main/AndroidManifest.xml";
+
+    if utils::file_exist(&android_manifest_xml) {
+        let mut meta: HashMap<String, String> = HashMap::new();
+        let mut attrs: HashMap<String, String> = HashMap::new();
+        if let Some(c) = &app.params.configs.base_config {
+            if let Some(m) = &c.meta {
+                meta.clone_from(m);
+            }
+
+            if let Some(app_name) = &c.app_name {
+                attrs.insert(format!("android:label"), app_name.clone());
+            }
+        }
+    }
+
+    Ok(())
+}
 
 #[cfg(test)]
 mod tests {
     use crate::{build_params::AppParams, utils::file_exist};
 
-    use super::{get_source, BuildParams};
+    use super::{fetch_source, BuildParams};
     use serde_json::Result;
     use uuid::Uuid;
 
@@ -94,7 +118,7 @@ mod tests {
         // remove_dir(&path);
 
         if !file_exist(&path) {
-            let result = get_source(&app);
+            let result = fetch_source(&app);
 
             match result {
                 Ok(_) => {

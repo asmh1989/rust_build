@@ -47,24 +47,24 @@ pub struct Version {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Configs {
     // 打包框架
-    framework: Framework,
+    pub framework: Framework,
     #[serde(skip_serializing_if = "Option::is_none")]
-    base_config: Option<BaseConfig>,
+    pub base_config: Option<BaseConfig>,
     // 应用配置
     #[serde(skip_serializing_if = "Option::is_none")]
-    app_config: Option<HashMap<String, String>>,
+    pub app_config: Option<HashMap<String, String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BaseConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
-    app_name: Option<String>,
+    pub app_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    app_icon: Option<String>,
+    pub app_icon: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    assets_config: Option<String>,
+    pub assets_config: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    meta: Option<HashMap<String, String>>,
+    pub meta: Option<HashMap<String, String>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -83,6 +83,7 @@ pub struct BuildStatus {
     pub msg: String,
 }
 
+#[allow(dead_code)]
 impl BuildStatus {
     pub fn success() -> Self {
         BuildStatus {

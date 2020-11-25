@@ -68,13 +68,7 @@ mod tests {
     fn test_shell() {
         let shell = super::Shell::new(String::from("/tmp"));
         let result = shell.run("ls -al");
-        match result {
-            Ok(_) => {
-                assert!(true);
-            }
-            Err(_) => {
-                assert!(false);
-            }
-        }
+
+        assert!(result.is_ok());
     }
 }
