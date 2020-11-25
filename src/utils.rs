@@ -63,11 +63,8 @@ pub fn remove_file(name: &str) {
     }
 }
 
-pub fn dir_exist(name: &str) -> bool {
-    match File::open(name) {
-        Ok(_) => true,
-        Err(_) => false,
-    }
+pub fn file_exist(path: &str) -> bool {
+    fs::metadata(path).is_ok()
 }
 
 #[cfg(test)]

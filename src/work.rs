@@ -15,7 +15,7 @@ pub fn get_source_path(build_id: Uuid) -> String {
 
 pub fn get_log_file(build_id: Uuid) -> String {
     let path = config::Config::cache_home();
-    if !utils::dir_exist(&(path.clone() + "/logs")) {
+    if !utils::file_exist(&(path.clone() + "/logs")) {
         let _r = Command::new("mkdir")
             .args(&["+p", &(path.clone() + "/logs")])
             .output();
@@ -48,6 +48,8 @@ pub fn release_build(app: &AppParams) -> Result<(), String> {
         &log
     ))?;
 
+    info!("build success!!");
+
     Ok(())
 }
 
@@ -55,7 +57,7 @@ pub fn start(_params: BuildParams) {}
 
 #[cfg(test)]
 mod tests {
-    use crate::{build_params::AppParams, utils::dir_exist};
+    use crate::{build_params::AppParams, utils::file_exist};
 
     use super::{get_source, BuildParams};
     use serde_json::Result;
@@ -91,7 +93,7 @@ mod tests {
         // 删除存在目录
         // remove_dir(&path);
 
-        if !dir_exist(&path) {
+        if !file_exist(&path) {
             let result = get_source(&app);
 
             match result {

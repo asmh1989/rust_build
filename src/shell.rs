@@ -2,7 +2,7 @@ use std::{fs::create_dir, fs::File, io::Write, process::Command, process::Stdio}
 
 use crate::config::Config;
 use crate::utils;
-use log::{debug, warn};
+use log::{debug, error, warn};
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -20,25 +20,29 @@ impl Shell {
     }
 
     pub fn run(&self, command: &str) -> Result<(), String> {
-        if !utils::dir_exist(&self.path) {
-            create_dir(&self.path).unwrap();
+        if !utils::file_exist(&self.path) {
+            let result = create_dir(&self.path);
+            if result.is_err() {
+                error!("create dir error");
+                return Err(format!(
+                    "mkdir path = {}, error = {:?}",
+                    &self.path,
+                    result.err()
+                ));
+            };
         }
 
         let path = format!("{}/{}.sh", self.path, Uuid::new_v4().to_string());
 
-        utils::remove_file(&path);
-        let result = File::create(path.clone());
-
-        if let Ok(mut file) = result {
+        if let Ok(mut file) = File::create(&path) {
             file.write_all(command.as_bytes()).expect("write failed");
             debug!("command:{}", command);
         }
 
         let result = Command::new("sh")
             .arg(&path)
-            .current_dir(self.current_dir.clone())
+            .current_dir(&self.current_dir)
             .env("ANDROID_HOME", Config::android_home())
-            .stderr(Stdio::piped())
             .output();
 
         utils::remove_file(&path);
