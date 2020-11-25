@@ -1,8 +1,10 @@
 use build_params::BuildParams;
+use log::{error, info};
 use serde_json::Result;
 
 mod build_params;
 mod config;
+mod shell;
 mod utils;
 mod work;
 
@@ -37,9 +39,9 @@ fn typed_example() -> Result<BuildParams> {
     let p: BuildParams = serde_json::from_str(data)?;
 
     // Do things just like with any other Rust data structure.
-    println!("build params =  {:?}", p);
+    info!("build params =  {:?}", p);
 
-    println!(
+    info!(
         "build params =  {}",
         serde_json::to_string_pretty(&p).ok().unwrap()
     );
@@ -53,12 +55,14 @@ fn main() {
     // .unwrap()
     // .set_cache_home("/tmp");
 
+    config::Config::get_instance();
+
+    info!("start ...");
+
     let result = typed_example();
 
     if let Err(e) = result {
-        println!("error parsing header: {:?}", e);
+        error!("error parsing header: {:?}", e);
         return;
     }
-
-    let params = result.unwrap();
 }

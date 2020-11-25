@@ -1,4 +1,4 @@
-use bson::{Bson, DateTime};
+use bson::DateTime;
 use serde::{Deserialize, Serialize};
 use url::Url;
 use uuid::Uuid;

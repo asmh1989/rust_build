@@ -1,13 +1,14 @@
 use git2::Repository;
 use git2::{Cred, RemoteCallbacks};
-use std::env;
+use log::{debug, info};
 use std::fs::{remove_dir_all, File};
 use std::path::Path;
+use std::{env, fs};
 
 /// git clone 代码
 pub fn clone_src(url: &str, path: &str) -> Result<(), String> {
     if url.starts_with("http") {
-        println!("start clone {} to {}", url, path);
+        info!("start clone {} to {}", url, path);
 
         let result = Repository::clone(url, path);
         match result {
@@ -15,7 +16,7 @@ pub fn clone_src(url: &str, path: &str) -> Result<(), String> {
             Err(error) => Err(error.message().to_string()),
         }
     } else {
-        println!("start ssh clone {} to {}", url, path);
+        info!("start ssh clone {} to {}", url, path);
         // Prepare callbacks.
         let mut callbacks = RemoteCallbacks::new();
         callbacks.credentials(|_url, username_from_url, _allowed_types| {
@@ -49,7 +50,23 @@ pub fn remove_dir(name: &str) {
 
     if let Ok(_) = f {
         remove_dir_all(name).expect("删除文件失败");
-        println!("delete {} success", name);
+        debug!("delete {} success", name);
+    }
+}
+
+pub fn remove_file(name: &str) {
+    let f = File::open(name);
+
+    if let Ok(_) = f {
+        fs::remove_file(name).expect("删除文件失败");
+        debug!("delete {} success", name);
+    }
+}
+
+pub fn dir_exist(name: &str) -> bool {
+    match File::open(name) {
+        Ok(_) => true,
+        Err(_) => false,
     }
 }
 

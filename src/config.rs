@@ -16,6 +16,8 @@ impl Config {
             // Rust中使用可变静态变量都是unsafe的
             CONFIG
                 .get_or_insert_with(|| {
+                    log4rs::init_file("config/log4rs.yaml", Default::default()).unwrap();
+
                     // 初始化单例对象的代码
                     Arc::new(Mutex::new(Config {
                         android_home: "/opt/android/sdk".to_string(),
@@ -41,5 +43,9 @@ impl Config {
 
     pub fn cache_home() -> String {
         Config::get_instance().lock().unwrap().cache_home.clone()
+    }
+
+    pub fn android_home() -> String {
+        Config::get_instance().lock().unwrap().android_home.clone()
     }
 }
