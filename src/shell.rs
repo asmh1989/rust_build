@@ -1,4 +1,4 @@
-use std::{fs::create_dir, fs::File, io::Write, process::Command, process::Stdio};
+use std::{fs::create_dir, fs::File, io::Write, process::Command};
 
 use crate::config::Config;
 use crate::utils;
@@ -19,7 +19,7 @@ impl Shell {
         }
     }
 
-    pub fn run(&self, command: &str) -> Result<(), String> {
+    pub fn run(&self, command: &str) -> Result<String, String> {
         if !utils::file_exist(&self.path) {
             let result = create_dir(&self.path);
             if result.is_err() {
@@ -54,7 +54,7 @@ impl Shell {
                     warn!("stderr: {}", err);
                     Err(format!("{}", err))
                 } else {
-                    Ok(())
+                    Ok(String::from_utf8_lossy(&output.stdout).to_string())
                 }
             }
             Err(error) => Err(error.to_string()),

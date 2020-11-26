@@ -10,6 +10,7 @@ pub struct Config {
     pub cache_home: String,
 }
 
+#[allow(dead_code)]
 impl Config {
     pub fn get_instance() -> Arc<Mutex<Config>> {
         static mut CONFIG: Option<Arc<Mutex<Config>>> = None;
