@@ -83,7 +83,6 @@ pub struct BuildStatus {
     pub msg: String,
 }
 
-#[allow(dead_code)]
 impl BuildStatus {
     pub fn success() -> Self {
         BuildStatus {

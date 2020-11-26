@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use build_params::BuildParams;
 use log::{error, info};
 use serde_json::Result;
