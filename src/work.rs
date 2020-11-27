@@ -45,7 +45,7 @@ pub fn release_build(app: &AppParams) -> Result<(), String> {
 
     info!("start build in .... {}", &dir);
 
-    let shell = shell::Shell::new(dir);
+    let shell = shell::Shell::new(&dir);
 
     shell.run(&format!("chmod a+x gradlew && ./gradlew clean > {}", &log))?;
 
@@ -76,7 +76,7 @@ pub fn change_config(app: &AppParams) -> Result<(), String> {
             }
         }
 
-        let shell = Shell::new(source.clone());
+        let shell = Shell::new(&source);
         let output = shell.run("git rev-parse HEAD")?;
         meta.insert("git_version".to_string(), output.trim().to_string());
 
@@ -92,6 +92,13 @@ pub fn change_config(app: &AppParams) -> Result<(), String> {
                 error!("{}", e.to_string());
                 return Err(e.to_string());
             }
+        }
+    }
+
+    if let Some(app_config) = &app.params.configs.app_config {
+        if !app_config.is_empty() {
+            let file = &format!("{}/app/src/main/assets/config.properties", source);
+            utils::change_properies_file(file, app_config)?
         }
     }
 
@@ -129,7 +136,12 @@ mod tests {
                     },
                     "assets_config" : "http://192.168.2.34:8086/jpm/nas/MDM45-buildConfig/e0d79b5647b241a98c90c19509d9eb63-G贵州公安-45.1.1.201126.1/config.zip"
                 },
-                "app_config" : {}
+                "app_config" : {
+                    "is_check_root" : "false",
+                    "is_check_support_sim_card" : "true",
+                    "is_overseas" : "false",
+                    "is_black_sim" : "false"
+                }
             }
         }"#;
 
@@ -163,12 +175,18 @@ mod tests {
                 }
             }
         }
-        let result = super::change_config(&app);
-        assert!(result.is_ok());
 
-        let result = super::release_build(&app);
+        match super::change_config(&app) {
+            Ok(_) => {
+                assert!(true)
+            }
+            Err(error) => {
+                println!("error = {}", error);
+                assert!(false);
+            }
+        }
 
-        match result {
+        match super::release_build(&app) {
             Ok(_) => {
                 assert!(true)
             }

@@ -12,9 +12,9 @@ pub struct Shell {
 }
 
 impl Shell {
-    pub fn new(dir: String) -> Self {
+    pub fn new(dir: &str) -> Self {
         Self {
-            current_dir: dir,
+            current_dir: dir.to_string(),
             path: Config::cache_home() + "/tmp",
         }
     }
@@ -50,8 +50,10 @@ impl Shell {
         match result {
             Ok(output) => {
                 if output.status.code().unwrap() != 0 {
-                    let err = String::from_utf8_lossy(&output.stderr);
-                    warn!("stderr: {}", err);
+                    let err = String::from_utf8_lossy(&output.stderr).to_string();
+                    if !err.is_empty() {
+                        warn!("stderr: {}", err);
+                    }
                     Err(format!("{}", err))
                 } else {
                     Ok(String::from_utf8_lossy(&output.stdout).to_string())
@@ -66,7 +68,7 @@ impl Shell {
 mod tests {
     #[test]
     fn test_shell() {
-        let shell = super::Shell::new(String::from("/tmp"));
+        let shell = super::Shell::new("/tmp");
         let result = shell.run("ls -al");
 
         assert!(result.is_ok());

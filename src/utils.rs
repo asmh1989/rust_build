@@ -8,6 +8,7 @@ use std::{
     collections::HashMap,
     fs::{remove_dir_all, File},
     io::{Cursor, Write},
+    path::Path,
     str::from_utf8,
 };
 
@@ -63,7 +64,7 @@ pub fn clone_src(
 ) -> Result<(), String> {
     info!("start git clone {} to {}", url, path);
 
-    let shell = Shell::new(String::from("/tmp"));
+    let shell = Shell::new("/tmp");
     let mut command = format!("git clone {} ", url);
 
     if let Some(b) = branch {
@@ -75,7 +76,7 @@ pub fn clone_src(
     shell.run(&command)?;
 
     if let Some(commit) = revision {
-        let shell = Shell::new(String::from(path));
+        let shell = Shell::new(path);
         info!(" checkout {} ", &commit);
         let command = format!("git checkout {}", commit);
         shell.run(&command)?;
@@ -218,6 +219,37 @@ pub fn change_xml<'a>(
     Ok(())
 }
 
+#[allow(unused_must_use)]
+pub fn change_properies_file(path: &str, config: &HashMap<String, String>) -> Result<(), String> {
+    if !file_exist(path) {
+        // 先创建parent dir
+        let p = Path::new(path);
+        let prefix = p.parent().unwrap();
+        std::fs::create_dir_all(prefix).unwrap();
+        File::create(path);
+    }
+
+    match File::open(path) {
+        Ok(_) => {
+            let shell = Shell::new("/tmp");
+
+            config.iter().for_each(|f| {
+                match shell.run(&format!("batcat {} | rg ^{}=", path, f.0)) {
+                    Ok(_) => {
+                        shell.run(&format!("sd '^{}.*' '{}={}' {}", f.0, f.0, f.1, path));
+                    }
+                    Err(_) => {
+                        shell.run(&format!("echo \"{}={}\" >> {}", f.0, f.1, path));
+                    }
+                }
+            });
+
+            Ok(())
+        }
+        Err(error) => Err(error.to_string()),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
@@ -243,6 +275,16 @@ mod tests {
     </application>
 
 </manifest>"#;
+
+    #[test]
+    fn properies_test() {
+        crate::config::Config::get_instance();
+        let mut meta: HashMap<String, String> = HashMap::new();
+        meta.insert("model".to_string(), "test1".to_string());
+        meta.insert("brank1".to_string(), "test2".to_string());
+
+        assert!(super::change_properies_file("/tmp/test.prop", &meta).is_ok());
+    }
 
     #[test]
     fn xml_manifest_test() {
