@@ -62,6 +62,7 @@ pub fn release_build(app: &AppParams) -> Result<(), String> {
 pub fn change_config(app: &AppParams) -> Result<(), String> {
     let source = get_source_path(app.build_id);
     let android_manifest_xml = source.clone() + "/app/src/main/AndroidManifest.xml";
+    let shell = Shell::new(&source);
 
     if utils::file_exist(&android_manifest_xml) {
         let mut meta: HashMap<String, String> = HashMap::new();
@@ -76,9 +77,10 @@ pub fn change_config(app: &AppParams) -> Result<(), String> {
             }
         }
 
-        let shell = Shell::new(&source);
         let output = shell.run("git rev-parse HEAD")?;
         meta.insert("git_version".to_string(), output.trim().to_string());
+
+        info!("change AndroidManifestXml...");
 
         match utils::change_xml(
             &fs::read_to_string(Path::new(&android_manifest_xml.as_str())).unwrap(),
@@ -93,13 +95,27 @@ pub fn change_config(app: &AppParams) -> Result<(), String> {
                 return Err(e.to_string());
             }
         }
+    } else {
+        return Err("AndroidManifestXml not exist !!".to_string());
     }
 
     if let Some(app_config) = &app.params.configs.app_config {
         if !app_config.is_empty() {
+            info!("change properies file...");
+
             let file = &format!("{}/app/src/main/assets/config.properties", source);
             utils::change_properies_file(file, app_config)?
         }
+    }
+
+    let gradle_file = format!("{}/app/build.gradle", source);
+
+    if let Some(_) = &app.params.version.version_code {
+        shell.run(&format!("sd 'versionCode .*' '' {} ", gradle_file))?;
+    }
+
+    if let Some(_) = &app.params.version.version_name {
+        shell.run(&format!("sd 'versionName .*' '' {} ", gradle_file))?;
     }
 
     Ok(())
