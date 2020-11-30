@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs, path::Path, process::Command, sync::mpsc::channel};
+use std::{collections::HashMap, fs, path::Path, process::Command};
 
 use log::{error, info};
 use shell::Shell;
