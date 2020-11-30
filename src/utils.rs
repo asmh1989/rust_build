@@ -16,46 +16,6 @@ use std::fs;
 
 use crate::shell::Shell;
 
-/// git clone 代码
-// pub fn clone_src(url: &str, path: &str) -> Result<(), String> {
-//     if url.starts_with("http") {
-//         info!("start clone {} to {}", url, path);
-
-//         let result = Repository::clone(url, path);
-//         match result {
-//             Ok(_) => Ok(()),
-//             Err(error) => Err(error.message().to_string()),
-//         }
-//     } else {
-//         info!("start ssh clone {} to {}", url, path);
-//         // Prepare callbacks.
-//         let mut callbacks = RemoteCallbacks::new();
-//         callbacks.credentials(|_url, username_from_url, _allowed_types| {
-//             Cred::ssh_key(
-//                 username_from_url.unwrap(),
-//                 None,
-//                 std::path::Path::new(&format!("{}/.ssh/id_rsa", env::var("HOME").unwrap())),
-//                 None,
-//             )
-//         });
-
-//         // Prepare fetch options.
-//         let mut fo = git2::FetchOptions::new();
-//         fo.remote_callbacks(callbacks);
-
-//         // Prepare builder.
-//         let mut builder = git2::build::RepoBuilder::new();
-//         builder.fetch_options(fo);
-
-//         // Clone the project.
-//         let ressult = builder.clone(url, Path::new(path));
-//         match ressult {
-//             Ok(_) => Ok(()),
-//             Err(error) => Err(error.message().to_string()),
-//         }
-//     }
-// }
-
 pub fn clone_src(
     url: &str,
     path: &str,

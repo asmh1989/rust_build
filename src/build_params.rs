@@ -7,12 +7,12 @@ use std::collections::HashMap;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum Framework {
-    #[serde(rename = "mdm_4")]
-    Mdm4,
-    #[serde(rename = "mdm_4.1")]
-    Mdm41,
-    #[serde(rename = "mdm_4.2")]
-    Mdm42,
+    // #[serde(rename = "mdm_4")]
+    // Mdm4,
+    // #[serde(rename = "mdm_4.1")]
+    // Mdm41,
+    // #[serde(rename = "mdm_4.2")]
+    // Mdm42,
     #[serde(rename = "normal")]
     Normal,
     #[serde(rename = "normal_4.5")]
@@ -62,7 +62,7 @@ pub struct BaseConfig {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub app_icon: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub assets_config: Option<String>,
+    pub assets_config: Option<Url>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub meta: Option<HashMap<String, String>>,
 }

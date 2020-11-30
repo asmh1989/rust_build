@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs, path::Path, process::Command};
+use std::{collections::HashMap, fs, path::Path, process::Command, sync::mpsc::channel};
 
 use log::{error, info};
 use shell::Shell;
@@ -6,6 +6,7 @@ use uuid::Uuid;
 
 use crate::build_params::{AppParams, Scm};
 use crate::config;
+use crate::framework::*;
 use crate::shell;
 use crate::utils;
 
@@ -39,6 +40,21 @@ pub fn fetch_source(app: &AppParams) -> Result<(), String> {
     }
 }
 
+fn get_channel_command<'a>(channel: Option<String>, log: &'a str) -> String {
+    let command = match channel {
+        Some(s) => format!(
+            "./gradlew assemble{}{}Release --no-daemon > {}",
+            (&s[..1].to_string()).to_uppercase(),
+            &s[1..],
+            &log
+        ),
+
+        None => format!("./gradlew assembleRelease --no-daemon >  {}", &log),
+    };
+
+    return command;
+}
+
 pub fn release_build(app: &AppParams) -> Result<(), String> {
     let dir = get_source_path(app.build_id);
     let log = get_log_file(app.build_id);
@@ -49,9 +65,9 @@ pub fn release_build(app: &AppParams) -> Result<(), String> {
 
     shell.run(&format!("chmod a+x gradlew && ./gradlew clean > {}", &log))?;
 
-    shell.run(&format!(
-        "./gradlew assembleRelease --no-daemon >  {}",
-        &log
+    shell.run(&get_channel_command(
+        app.params.version.channel.clone(),
+        &log,
     ))?;
 
     info!("build success!!");
@@ -121,14 +137,24 @@ pub fn change_config(app: &AppParams) -> Result<(), String> {
     Ok(())
 }
 
+pub fn start(app: &AppParams) -> Result<(), String> {
+    match app.params.configs.framework {
+        crate::build_params::Framework::Normal => {
+            base::step(&normal::NormalBuild(), app)?;
+        }
+        crate::build_params::Framework::Normal45 => base::step(&mdm::MdmBuild(), app)?,
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use crate::{
         build_params::{AppParams, BuildParams},
-        utils::file_exist,
+        utils,
     };
 
-    use super::fetch_source;
     use serde_json::Result;
     use uuid::Uuid;
 
@@ -143,7 +169,7 @@ mod tests {
                 "version_name" : "45.1.1.201126.1"
             },
             "configs" : {
-                "framework" : "normal",
+                "framework" : "normal_4.5",
                 "base_config" : {
                     "app_name" : "自助助手",
                     "meta" : {
@@ -176,23 +202,9 @@ mod tests {
         let path = super::get_source_path(app.build_id);
 
         // 删除存在目录
-        // remove_dir(&path);
+        utils::remove_dir(&path);
 
-        if !file_exist(&path) {
-            let result = fetch_source(&app);
-
-            match result {
-                Ok(_) => {
-                    assert!(true)
-                }
-                Err(error) => {
-                    println!("error = {}", error);
-                    assert!(false);
-                }
-            }
-        }
-
-        match super::change_config(&app) {
+        match super::start(&app) {
             Ok(_) => {
                 assert!(true)
             }
@@ -201,15 +213,12 @@ mod tests {
                 assert!(false);
             }
         }
+    }
 
-        match super::release_build(&app) {
-            Ok(_) => {
-                assert!(true)
-            }
-            Err(error) => {
-                println!("error = {}", error);
-                assert!(false);
-            }
-        }
+    #[test]
+    fn test_channel_command() {
+        let log = "111";
+        let command = super::get_channel_command(Some("master".to_string()), log);
+        assert_eq!(command, "./gradlew assembleMasterRelease --no-daemon > 111")
     }
 }

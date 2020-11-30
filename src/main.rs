@@ -10,6 +10,8 @@ mod shell;
 mod utils;
 mod work;
 
+mod framework;
+
 fn typed_example() -> Result<BuildParams> {
     // Some JSON input data as a &str. Maybe this comes from the user.
     let data = r#"
