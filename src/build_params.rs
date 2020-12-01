@@ -135,7 +135,7 @@ impl AppParams {
             date: DateTime(chrono::Utc::now()),
             build_id: Uuid::new_v4(),
             status: BuildStatus::waiting(),
-            params: params,
+            params,
             build_time: 0,
             fid: None,
             operate: String::from(operate),

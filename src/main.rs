@@ -1,58 +1,39 @@
 #![allow(dead_code)]
 
-use build_params::BuildParams;
-use log::{error, info};
-use serde_json::Result;
+use actix_web::{
+    error::InternalError, error::JsonPayloadError, get, middleware::Logger, web, App, Error,
+    HttpRequest, HttpResponse, HttpServer, Responder,
+};
+use http_response::*;
+use log::info;
+use serde_json::Value;
 
 mod build_params;
 mod config;
+mod http;
+mod http_response;
 mod shell;
 mod utils;
 mod work;
 
 mod framework;
 
-fn typed_example() -> Result<BuildParams> {
-    // Some JSON input data as a &str. Maybe this comes from the user.
-    let data = r#"
-    {
-        "version" : {
-            "project_name" : "seed",
-            "module_name" : "seed",
-            "scm" : "git",
-            "source_url" : "ssh://git@gitlab.justsafe.com:8442/ht5.0/mdm.git",
-            "version_code" : 20111101,
-            "version_name" : "5.0.20201111r1",
-            "channel" : "master"
-        },
-        "configs" : {
-            "framework": "normal",
-            "app_config" : {
-                "is_check_root" : "true",
-                "is_check_support_sim_card" : "true",
-                "is_overseas" : "false",
-                "is_black_sim" : "false"
-            }
-        },
-        "email" : "zhangtc@justsafe.com"
-    }"#;
-
-    // Parse the string of data into a Person object. This is exactly the
-    // same function as the one that produced serde_json::Value above, but
-    // now we are asking it for a Person as output.
-    let p: BuildParams = serde_json::from_str(data)?;
-
-    // Do things just like with any other Rust data structure.
-    info!("build params =  {:?}", p);
-
-    info!(
-        "build params =  {}",
-        serde_json::to_string_pretty(&p).ok().unwrap()
-    );
-
-    Ok(p)
+#[get("/")]
+async fn hello() -> impl Responder {
+    response_ok(Value::String("hello world".to_string()))
 }
-fn main() {
+
+async fn manual_hello() -> impl Responder {
+    HttpResponse::Ok().body("Hey there!")
+}
+
+fn post_error(err: JsonPayloadError, _: &HttpRequest) -> Error {
+    let res = format!("{}", err);
+    InternalError::from_response(err, response_error(res)).into()
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
     // 修改config
     // config::Config::get_instance()
     // .lock()
@@ -63,10 +44,18 @@ fn main() {
 
     info!("start ...");
 
-    let result = typed_example();
-
-    if let Err(e) = result {
-        error!("error parsing header: {:?}", e);
-        return;
-    }
+    HttpServer::new(|| {
+        App::new()
+            .wrap(Logger::new("%U %s %D"))
+            .service(hello)
+            .service(
+                web::resource("/app/build")
+                    .data(web::JsonConfig::default().error_handler(post_error))
+                    .route(web::post().to(http::MyRoute::build)),
+            )
+            .route("/hey", web::get().to(manual_hello))
+    })
+    .bind("127.0.0.1:3771")?
+    .run()
+    .await
 }

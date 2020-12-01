@@ -8,6 +8,7 @@ pub struct Config {
     pub android_home: String,
     pub java_home: String,
     pub cache_home: String,
+    pub building: bool,
 }
 
 impl Config {
@@ -25,6 +26,7 @@ impl Config {
                         android_home: "/opt/android/sdk".to_string(),
                         java_home: "".to_string(),
                         cache_home: format!("{}/.mdm_build", env::var("HOME").unwrap()).to_string(),
+                        building: false,
                     }))
                 })
                 .clone()
@@ -43,11 +45,19 @@ impl Config {
         self.android_home = android.to_string();
     }
 
+    pub fn set_building(&mut self, building: bool) {
+        self.building = building;
+    }
+
     pub fn cache_home() -> String {
         Config::get_instance().lock().unwrap().cache_home.clone()
     }
 
     pub fn android_home() -> String {
         Config::get_instance().lock().unwrap().android_home.clone()
+    }
+
+    pub fn is_building() -> bool {
+        Config::get_instance().lock().unwrap().building
     }
 }

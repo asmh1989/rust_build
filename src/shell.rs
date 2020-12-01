@@ -2,7 +2,7 @@ use std::{fs::create_dir, fs::File, io::Write, process::Command};
 
 use crate::config::Config;
 use crate::utils;
-use log::{debug, error, warn};
+use log::{debug, error};
 use uuid::Uuid;
 
 #[derive(Debug)]
@@ -51,9 +51,9 @@ impl Shell {
             Ok(output) => {
                 if output.status.code().unwrap() != 0 {
                     let err = String::from_utf8_lossy(&output.stderr).to_string();
-                    if !err.is_empty() {
-                        warn!("stderr: {}", err);
-                    }
+                    // if !err.is_empty() {
+                    //     warn!("stderr: {}", err);
+                    // }
                     Err(format!("{}", err))
                 } else {
                     Ok(String::from_utf8_lossy(&output.stdout).to_string())

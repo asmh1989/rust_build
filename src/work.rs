@@ -70,8 +70,6 @@ pub fn release_build(app: &AppParams) -> Result<(), String> {
         &log,
     ))?;
 
-    info!("build success!!");
-
     Ok(())
 }
 

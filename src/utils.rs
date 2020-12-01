@@ -28,7 +28,9 @@ pub fn clone_src(
     let mut command = format!("git clone {} ", url);
 
     if let Some(b) = branch {
-        command.push_str(&format!(" -b {} ", &b));
+        if !b.is_empty() {
+            command.push_str(&format!(" -b {} ", &b));
+        }
     }
 
     command.push_str(path.clone());
