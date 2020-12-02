@@ -10,13 +10,13 @@ use serde_json::Value;
 
 mod build_params;
 mod config;
+mod db;
+mod framework;
 mod http;
 mod http_response;
 mod shell;
 mod utils;
 mod work;
-
-mod framework;
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -43,6 +43,8 @@ async fn main() -> std::io::Result<()> {
     config::Config::get_instance();
 
     info!("start ...");
+
+    db::init_db("mongodb://192.168.2.36:27017").await;
 
     HttpServer::new(|| {
         App::new()

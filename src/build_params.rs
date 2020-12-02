@@ -126,7 +126,7 @@ pub struct AppParams {
     pub params: BuildParams,
     pub build_time: u16,
     pub fid: Option<String>,
-    pub operate: String,
+    pub operate: Option<String>,
 }
 
 impl AppParams {
@@ -138,7 +138,7 @@ impl AppParams {
             params,
             build_time: 0,
             fid: None,
-            operate: String::from(operate),
+            operate: Some(operate.to_string()),
         }
     }
 }
