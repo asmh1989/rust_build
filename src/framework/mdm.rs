@@ -11,20 +11,21 @@ use crate::build_params::AppParams;
 
 use super::base::BuildStep;
 use crate::utils;
+use async_trait::async_trait;
 
 pub struct MdmBuild();
 
 /// 下载文件
-fn download_file(path: &str, url: Url) -> Result<(), String> {
+async fn download_file(path: &str, url: Url) -> Result<(), String> {
     info!("download file {} ...", url);
-    match reqwest::blocking::get(url) {
+    match reqwest::get(url).await {
         Ok(response) => {
             let mut file = match File::create(&path) {
                 Err(why) => return Err(format!("couldn't create {}", why)),
                 Ok(file) => file,
             };
 
-            match response.bytes() {
+            match response.bytes().await {
                 Ok(content) => {
                     if file.write_all(&content).is_err() {
                         return Err("read response bytes error!!".to_string());
@@ -71,8 +72,9 @@ fn zip_file(zip: &str, dir: &str) -> Result<(), String> {
     Ok(())
 }
 
+#[async_trait]
 impl BuildStep for MdmBuild {
-    fn step_change(&self, app: &AppParams) -> Result<(), String> {
+    async fn step_change(&self, app: &AppParams) -> Result<(), String> {
         crate::work::change_config(app)?;
 
         if let Some(config) = &app.params.configs.base_config {
@@ -80,7 +82,7 @@ impl BuildStep for MdmBuild {
                 info!("config assets config url = {}", url);
                 let source = &crate::work::get_source_path(app.build_id);
                 let path = format!("{}/.test.zip", source);
-                download_file(path.as_str(), url)?;
+                download_file(path.as_str(), url).await?;
                 zip_file(
                     &path,
                     &format!("{}/core_main/src/main/assets/config", source),
@@ -110,11 +112,11 @@ mod tests {
     const URL:&'static str = "http://192.168.2.34:8086/jpm/nas/MDM45-buildConfig/5e677a0b0ba94e83ac9a51f7821bddc5-S深圳公安-45.8.1.201127.1/config.zip";
     const PATH: &'static str = "/tmp/123.zip";
 
-    #[test]
-    fn test_download_zip() {
+    #[actix_rt::test]
+    async fn test_download_zip() {
         crate::config::Config::get_instance();
 
-        match download_file(PATH, Url::parse(URL).unwrap()) {
+        match download_file(PATH, Url::parse(URL).unwrap()).await {
             Ok(_) => {
                 assert!(true);
             }

@@ -88,7 +88,7 @@ fn has_android_name(attrs: &Attributes, meta: &HashMap<String, String>) -> bool 
 pub fn change_xml<'a>(
     xml: &'a str,
     meta: &HashMap<String, String>,
-    version_code: Option<u32>,
+    version_code: Option<i32>,
     version_name: Option<String>,
     path: Option<&'a str>,
 ) -> Result<(), Error> {

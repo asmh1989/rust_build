@@ -1,9 +1,15 @@
 use bson::DateTime;
+use log::info;
 use serde::{Deserialize, Serialize};
 use url::Url;
 use uuid::Uuid;
 
 use std::collections::HashMap;
+
+use crate::{
+    db::{Db, COLLECTION_BUILD},
+    filter_build_id,
+};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum Framework {
@@ -39,7 +45,7 @@ pub struct Version {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub revision: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub version_code: Option<u32>,
+    pub version_code: Option<i32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub version_name: Option<String>,
 }
@@ -79,7 +85,7 @@ pub struct BuildParams {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BuildStatus {
-    pub code: i8,
+    pub code: i32,
     pub msg: String,
 }
 
@@ -119,12 +125,14 @@ impl BuildStatus {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppParams {
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    id: Option<bson::oid::ObjectId>,
     pub date: DateTime,
     pub build_id: Uuid,
     #[serde(flatten)]
     pub status: BuildStatus,
     pub params: BuildParams,
-    pub build_time: u16,
+    pub build_time: i16,
     pub fid: Option<String>,
     pub operate: Option<String>,
 }
@@ -132,6 +140,7 @@ pub struct AppParams {
 impl AppParams {
     pub fn new(params: BuildParams, operate: &str) -> Self {
         Self {
+            id: None,
             date: DateTime(chrono::Utc::now()),
             build_id: Uuid::new_v4(),
             status: BuildStatus::waiting(),
@@ -140,6 +149,28 @@ impl AppParams {
             fid: None,
             operate: Some(operate.to_string()),
         }
+    }
+
+    pub async fn save_db(&self) -> Result<(), String> {
+        let doc = match bson::to_bson(&self) {
+            Ok(d) => d.as_document().unwrap().clone(),
+            Err(e) => {
+                info!("to_bson err {}", e);
+                return Err(format!("to_bson error : {}", e));
+            }
+        };
+
+        if let Err(e) = Db::save(
+            COLLECTION_BUILD,
+            filter_build_id!(self.build_id.to_string()),
+            doc.clone(),
+        )
+        .await
+        {
+            info!("db save error{} ", e);
+            return Err(format!("db save error{} ", e));
+        }
+        Ok(())
     }
 }
 

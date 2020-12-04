@@ -4,11 +4,14 @@ use log::{error, info};
 use shell::Shell;
 use uuid::Uuid;
 
-use crate::build_params::{AppParams, Scm};
 use crate::config;
 use crate::framework::*;
 use crate::shell;
 use crate::utils;
+use crate::{
+    build_params::{AppParams, Scm},
+    framework::base::BuildStep,
+};
 
 pub fn get_source_path(build_id: Uuid) -> String {
     let path = config::Config::cache_home();
@@ -135,12 +138,12 @@ pub fn change_config(app: &AppParams) -> Result<(), String> {
     Ok(())
 }
 
-pub fn start(app: &AppParams) -> Result<(), String> {
+pub async fn start(app: &AppParams) -> Result<(), String> {
     match app.params.configs.framework {
         crate::build_params::Framework::Normal => {
-            base::step(&normal::NormalBuild(), app)?;
+            normal::NormalBuild().step(app).await?;
         }
-        crate::build_params::Framework::Normal45 => base::step(&mdm::MdmBuild(), app)?,
+        crate::build_params::Framework::Normal45 => mdm::MdmBuild().step(app).await?,
     }
 
     Ok(())
@@ -189,8 +192,8 @@ mod tests {
 
         Ok(p)
     }
-    #[test]
-    fn test_normal_build() {
+    #[actix_rt::test]
+    async fn test_normal_build() {
         let result = http_params();
 
         let params = result.unwrap();
@@ -202,7 +205,7 @@ mod tests {
         // 删除存在目录
         utils::remove_dir(&path);
 
-        match super::start(&app) {
+        match super::start(&app).await {
             Ok(_) => {
                 assert!(true)
             }
