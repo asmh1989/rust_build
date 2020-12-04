@@ -1,17 +1,17 @@
 use std::{collections::HashMap, fs, path::Path, process::Command};
 
-use log::{error, info};
+use log::{error, info, warn};
 use shell::Shell;
 use uuid::Uuid;
 
-use crate::config;
-use crate::framework::*;
 use crate::shell;
 use crate::utils;
+use crate::{build_params, config};
 use crate::{
     build_params::{AppParams, Scm},
     framework::base::BuildStep,
 };
+use crate::{config::Config, framework::*};
 
 pub fn get_source_path(build_id: Uuid) -> String {
     let path = config::Config::cache_home();
@@ -147,6 +147,39 @@ pub async fn start(app: &AppParams) -> Result<(), String> {
     }
 
     Ok(())
+}
+
+pub async fn start_build(mut app: AppParams) {
+    info!("start build {} ... ", app.build_id);
+    let time = chrono::Utc::now().timestamp();
+    app.status = build_params::BuildStatus::building();
+    if let Err(e) = app.save_db().await {
+        info!("{}", e);
+    }
+    match start(&app).await {
+        Ok(_) => {
+            info!("{}  build finish ....", app.build_id);
+
+            app.build_time = (chrono::Utc::now().timestamp() - time) as i16;
+
+            app.status = build_params::BuildStatus::success();
+            if let Err(e) = app.save_db().await {
+                info!("{}", e);
+            }
+        }
+        Err(e) => {
+            warn!(
+                "{} error \n------------------------\n{}\n------------------------",
+                app.build_id, e
+            );
+
+            app.status = build_params::BuildStatus::failed(e);
+            if let Err(err) = app.save_db().await {
+                info!("{}", err);
+            }
+        }
+    }
+    Config::change_building(false);
 }
 
 #[cfg(test)]

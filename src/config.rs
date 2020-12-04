@@ -60,4 +60,8 @@ impl Config {
     pub fn is_building() -> bool {
         Config::get_instance().lock().unwrap().building
     }
+
+    pub fn change_building(b: bool) {
+        Config::get_instance().lock().unwrap().set_building(b);
+    }
 }
