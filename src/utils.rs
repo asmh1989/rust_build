@@ -16,6 +16,13 @@ use std::fs;
 
 use crate::shell::Shell;
 
+#[macro_export]
+macro_rules! result_err {
+    () => {
+        |err| format!("{:?}", err)
+    };
+}
+
 pub fn clone_src(
     url: &str,
     path: &str,

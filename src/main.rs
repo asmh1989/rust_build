@@ -16,6 +16,7 @@ mod http;
 mod http_response;
 mod shell;
 mod utils;
+mod weed;
 mod work;
 
 #[get("/")]
