@@ -16,7 +16,11 @@ pub trait BuildStep {
         release_build(app)
     }
 
-    async fn step(&self, app: &AppParams) -> Result<(), String> {
+    async fn step_upload(&self, app: &mut AppParams) -> Result<(), String> {
+        upload_build(app).await
+    }
+
+    async fn step(&self, app: &mut AppParams) -> Result<(), String> {
         // 1. 下载代码
         self.step_source(app)?;
 
@@ -25,6 +29,9 @@ pub trait BuildStep {
 
         // 3. 开始打包
         self.step_build(app)?;
+
+        // 4. 结果上传
+        self.step_upload(app).await?;
 
         Ok(())
     }

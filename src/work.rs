@@ -76,6 +76,27 @@ pub fn release_build(app: &AppParams) -> Result<(), String> {
     Ok(())
 }
 
+pub async fn upload_build(app: &mut AppParams) -> Result<(), String> {
+    let dir = get_source_path(app.build_id);
+    let shell = shell::Shell::new(&dir);
+    let apk = shell.run("fd -I -a  'release.apk'")?;
+    info!("found apk ... {}", apk);
+
+    let fid = crate::weed::upload(
+        apk.trim(),
+        format!(
+            "{}_{}.apk",
+            app.params.version.project_name.clone().unwrap(),
+            app.params.version.version_name.clone().unwrap()
+        ),
+    )
+    .await?;
+
+    app.fid = Some(fid);
+
+    Ok(())
+}
+
 pub fn change_config(app: &AppParams) -> Result<(), String> {
     let source = get_source_path(app.build_id);
     let android_manifest_xml = source.clone() + "/app/src/main/AndroidManifest.xml";
@@ -138,7 +159,7 @@ pub fn change_config(app: &AppParams) -> Result<(), String> {
     Ok(())
 }
 
-pub async fn start(app: &AppParams) -> Result<(), String> {
+pub async fn start(app: &mut AppParams) -> Result<(), String> {
     match app.params.configs.framework {
         crate::build_params::Framework::Normal => {
             normal::NormalBuild().step(app).await?;
@@ -156,7 +177,7 @@ pub async fn start_build(mut app: AppParams) {
     if let Err(e) = app.save_db().await {
         info!("{}", e);
     }
-    match start(&app).await {
+    match start(&mut app).await {
         Ok(_) => {
             info!("{}  build finish ....", app.build_id);
 
@@ -238,7 +259,7 @@ mod tests {
         // 删除存在目录
         utils::remove_dir(&path);
 
-        match super::start(&app).await {
+        match super::start(&mut app).await {
             Ok(_) => {
                 assert!(true)
             }

@@ -132,7 +132,7 @@ mod tests {
     #[actix_rt::test]
     async fn test_delete() {
         crate::config::Config::get_instance();
-        let result = super::delete("22,06d3c604ec79").await;
+        let result = super::delete("26,06d488a59e3a").await;
         match result {
             Ok(_) => {
                 assert!(true);
