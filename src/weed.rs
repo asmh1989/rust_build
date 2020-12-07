@@ -32,47 +32,41 @@ pub async fn upload(path: &str, file_name: String) -> Result<String, String> {
 
     match reqwest::get(ASSIGN_URL).await {
         Ok(res) => {
-            let auth = {
-                let h = res.headers().get(AUTH_KEY).unwrap();
-                format!("{:?}", h)
+            let header = res.headers().clone();
+
+            let json = res.json::<Assign>().await.map_err(result_err!())?;
+
+            info!("res = {:?}", json);
+
+            let fid = json.fid;
+            let url = json.url;
+
+            let client = reqwest::Client::new();
+
+            let mut form = Form::new();
+            form = {
+                let file = File::open(path).await.map_err(result_err!())?;
+
+                let reader = Body::wrap_stream(FramedRead::new(file, BytesCodec::new()));
+                form.part("file", Part::stream(reader).file_name(file_name))
             };
 
-            match res.json::<Assign>().await {
-                Ok(json) => {
-                    info!("res = {:?}", json);
+            let result = client
+                .post(format!("http://{}/{}", url, fid).as_str())
+                .header(AUTH_KEY, header.get(AUTH_KEY).unwrap())
+                .multipart(form)
+                .send()
+                .await
+                .map_err(result_err!())?;
 
-                    let fid = json.fid;
-                    let url = json.url;
+            let code = { result.status() };
+            let s = { result.text().await.unwrap() };
+            info!("upload {}, url = {} ", s, get_upload_url!(fid));
 
-                    let client = reqwest::Client::new();
-
-                    let mut form = Form::new();
-                    form = {
-                        let file = File::open(path).await.map_err(result_err!())?;
-
-                        let reader = Body::wrap_stream(FramedRead::new(file, BytesCodec::new()));
-                        form.part("file", Part::stream(reader).file_name(file_name))
-                    };
-
-                    let result = client
-                        .post(format!("http://{}/{}", url, fid).as_str())
-                        .header(AUTH_KEY, auth)
-                        .multipart(form)
-                        .send()
-                        .await
-                        .map_err(result_err!())?;
-
-                    let code = { result.status() };
-                    let s = { result.text().await.unwrap() };
-                    info!("upload {}, url ={} ", s, get_upload_url!(fid));
-
-                    if code == StatusCode::OK {
-                        Ok(fid)
-                    } else {
-                        Err(s)
-                    }
-                }
-                Err(err) => return Err(err.to_string()),
+            if code == StatusCode::CREATED {
+                Ok(fid)
+            } else {
+                Err(s)
             }
         }
         Err(err) => return Err(err.to_string()),
@@ -99,7 +93,7 @@ pub async fn delete(fid: &str) -> Result<(), String> {
     let s = { result.text().await.unwrap() };
     info!("delete {} ", s);
 
-    if code == StatusCode::OK {
+    if code == StatusCode::ACCEPTED {
         Ok(())
     } else {
         Err(s)
@@ -116,8 +110,17 @@ mod tests {
 
         let result = super::upload("/tmp/123.zip", "132.zip".to_string()).await;
         match result {
-            Ok(_) => {
-                assert!(true);
+            Ok(fid) => {
+                let result = super::delete(&fid).await;
+                match result {
+                    Ok(_) => {
+                        assert!(true);
+                    }
+                    Err(err) => {
+                        info!("err = {}", err);
+                        assert!(false);
+                    }
+                }
             }
             Err(err) => {
                 info!("err = {}", err);
@@ -129,7 +132,7 @@ mod tests {
     #[actix_rt::test]
     async fn test_delete() {
         crate::config::Config::get_instance();
-        let result = super::delete("25,06c9b7e5fc46").await;
+        let result = super::delete("22,06d3c604ec79").await;
         match result {
             Ok(_) => {
                 assert!(true);
