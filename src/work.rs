@@ -170,6 +170,7 @@ pub async fn start(app: &mut AppParams) -> Result<(), String> {
     Ok(())
 }
 
+#[warn(unused_must_use)]
 pub async fn start_build(mut app: AppParams) {
     info!("start build {} ... ", app.build_id);
     let time = chrono::Utc::now().timestamp();
@@ -200,6 +201,14 @@ pub async fn start_build(mut app: AppParams) {
             }
         }
     }
+
+    match crate::mail::send_email(&app).await {
+        Ok(_) => {}
+        Err(err) => {
+            info!("send mail err = {}", err)
+        }
+    }
+
     Config::change_building(false);
 }
 

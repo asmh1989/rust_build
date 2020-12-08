@@ -79,7 +79,7 @@ pub struct BuildParams {
     pub configs: Configs,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub email: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "responseUrl")]
     pub response_url: Option<Url>,
 }
 
@@ -152,7 +152,7 @@ impl AppParams {
             status: BuildStatus::waiting(),
             params,
             build_time: 0,
-            fid: None,
+            fid: Some("".to_string()),
             operate: Some(operate.to_string()),
         }
     }

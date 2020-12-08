@@ -36,7 +36,11 @@ async-trait = "0.1.42"
 
 tokio-util = { version = "0.3", features = ["codec"] }
 
-lettre = { version = "0.10.0-alpha.4", feature = ["tokio02", "native-tls"] }
+# lettre = { version = "0.10.0-alpha.4", feature = ["tokio02", "native-tls"] }
+
+lettre = "0.9.5"
+
+lettre_email = "0.9.4"
 
 native-tls = "0.2"
 
