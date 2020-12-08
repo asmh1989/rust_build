@@ -36,5 +36,11 @@ async-trait = "0.1.42"
 
 tokio-util = { version = "0.3", features = ["codec"] }
 
+lettre = { version = "0.10.0-alpha.4", feature = ["tokio02", "native-tls"] }
+
+native-tls = "0.2"
+
+regex = "1.4.2"
+
 [dev-dependencies]
 actix-rt = "1.1.1"

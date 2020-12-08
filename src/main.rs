@@ -18,6 +18,7 @@ mod shell;
 mod utils;
 mod weed;
 mod work;
+mod mail;
 
 #[get("/")]
 async fn hello() -> impl Responder {

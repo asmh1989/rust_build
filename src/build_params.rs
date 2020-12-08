@@ -89,12 +89,18 @@ pub struct BuildStatus {
     pub msg: String,
 }
 
+static STATUS_SUCCESS: i32 = 0;
+
 impl BuildStatus {
     pub fn success() -> Self {
         BuildStatus {
-            code: 0,
+            code: STATUS_SUCCESS,
             msg: String::from("打包成功"),
         }
+    }
+
+    pub fn is_success(&self) -> bool {
+        self.code == STATUS_SUCCESS
     }
 
     pub fn failed(msg: String) -> Self {

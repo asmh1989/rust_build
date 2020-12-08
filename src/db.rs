@@ -30,7 +30,6 @@ pub struct Db {
 
 const TABLE_NAME: &'static str = "build_data";
 pub const COLLECTION_BUILD: &'static str = "build";
-pub const KEY_BUILD_ID: &'static str = "build_id";
 const KEY_UPDATE_TIME: &'static str = "update_time";
 
 static mut DB: Option<Arc<Mutex<Db>>> = None;
