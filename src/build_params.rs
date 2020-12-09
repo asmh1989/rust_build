@@ -89,18 +89,20 @@ pub struct BuildStatus {
     pub msg: String,
 }
 
-static STATUS_SUCCESS: i32 = 0;
+static CODE_SUCCESS: i32 = 0;
+pub static CODE_ILLEGAL: i32 = -1;
+pub static MSG_ILLEGAL: &'static str = "非法id";
 
 impl BuildStatus {
     pub fn success() -> Self {
         BuildStatus {
-            code: STATUS_SUCCESS,
+            code: CODE_SUCCESS,
             msg: String::from("打包成功"),
         }
     }
 
     pub fn is_success(&self) -> bool {
-        self.code == STATUS_SUCCESS
+        self.code == CODE_SUCCESS
     }
 
     pub fn failed(msg: String) -> Self {
@@ -123,8 +125,8 @@ impl BuildStatus {
 
     pub fn illegal() -> Self {
         BuildStatus {
-            code: -1,
-            msg: String::from("非法id"),
+            code: CODE_ILLEGAL,
+            msg: String::from(MSG_ILLEGAL),
         }
     }
 }

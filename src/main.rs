@@ -14,11 +14,11 @@ mod db;
 mod framework;
 mod http;
 mod http_response;
+mod mail;
 mod shell;
 mod utils;
 mod weed;
 mod work;
-mod mail;
 
 #[get("/")]
 async fn hello() -> impl Responder {
@@ -57,6 +57,7 @@ async fn main() -> std::io::Result<()> {
                     .data(web::JsonConfig::default().error_handler(post_error))
                     .route(web::post().to(http::MyRoute::build)),
             )
+            .route("/app/query/{id}", web::get().to(http::MyRoute::query))
             .route("/hey", web::get().to(manual_hello))
     })
     .bind("127.0.0.1:3771")?
