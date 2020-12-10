@@ -52,6 +52,7 @@ impl Db {
         table: &str,
         filter: impl Into<Option<Document>>,
         options: impl Into<Option<FindOptions>>,
+        call_back: &dyn Fn(AppParams),
     ) -> Result<(), Error> {
         let client = Db::get_instance().lock().unwrap().client.clone();
         let db = client.database(TABLE_NAME);
@@ -65,9 +66,7 @@ impl Db {
                 Ok(document) => {
                     let result = bson::from_bson::<AppParams>(Bson::Document(document));
                     match result {
-                        Ok(app) => {
-                            info!("app = {:?}", serde_json::to_string(&app));
-                        }
+                        Ok(app) => call_back(app),
                         Err(err) => {
                             info!("err = {:?}", err);
                         }

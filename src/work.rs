@@ -5,8 +5,7 @@ use log::{error, info, warn};
 use shell::Shell;
 use uuid::Uuid;
 
-use crate::utils;
-use crate::{build_params, config};
+use crate::{build_params, config, get_upload_url, utils::file_exist};
 use crate::{
     build_params::{AppParams, Scm},
     framework::base::BuildStep,
@@ -16,6 +15,7 @@ use crate::{
     db::{Db, COLLECTION_BUILD},
     filter_build_id, shell,
 };
+use crate::{get_default, utils};
 
 pub fn get_source_path(build_id: Uuid) -> String {
     let path = config::Config::cache_home();
@@ -66,7 +66,7 @@ pub fn release_build(app: &AppParams) -> Result<(), String> {
     let dir = get_source_path(app.build_id);
     let log = get_log_file(app.build_id);
 
-    info!("start build in .... {}", &dir);
+    info!("start build in .... {}  log = {}", &dir, &log);
 
     let shell = shell::Shell::new(&dir);
 
@@ -90,8 +90,8 @@ pub async fn upload_build(app: &mut AppParams) -> Result<(), String> {
         apk.trim(),
         format!(
             "{}_{}.apk",
-            app.params.version.project_name.clone().unwrap(),
-            app.params.version.version_name.clone().unwrap()
+            get_default!(app.params.version.project_name),
+            get_default!(app.params.version.version_name)
         ),
     )
     .await?;
@@ -174,7 +174,7 @@ pub async fn start(app: &mut AppParams) -> Result<(), String> {
     Ok(())
 }
 
-pub async fn start_build_by_id(id: &str) {
+pub async fn start_build_by_id(id: String) {
     let doc = filter_build_id!(id);
 
     let result = Db::find_one(COLLECTION_BUILD, doc, None).await;
@@ -231,7 +231,27 @@ pub fn start_build(mut app: AppParams) {
                             app.build_id, e
                         );
 
+                        app.build_time = (chrono::Utc::now().timestamp() - time) as i16;
+
                         app.status = build_params::BuildStatus::failed(e);
+
+                        let log = get_log_file(app.build_id);
+
+                        if file_exist(&log) {
+                            match crate::weed::upload(&log, format!("{}.txt", app.build_id)).await {
+                                Ok(fid) => {
+                                    app.status.msg = format!(
+                                        "{}\n 详细日志地址: {}",
+                                        app.status.msg,
+                                        get_upload_url!(fid)
+                                    );
+                                }
+                                Err(err) => {
+                                    info!("error upload log file : {}", err);
+                                }
+                            }
+                        }
+
                         if let Err(err) = app.save_db().await {
                             info!("{}", err);
                         }

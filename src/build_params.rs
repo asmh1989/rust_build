@@ -89,9 +89,12 @@ pub struct BuildStatus {
     pub msg: String,
 }
 
-static CODE_SUCCESS: i32 = 0;
-pub static CODE_ILLEGAL: i32 = -1;
-pub static MSG_ILLEGAL: &'static str = "非法id";
+const CODE_SUCCESS: i32 = 0;
+pub const CODE_ILLEGAL: i32 = -1;
+pub const CODE_WAITING: i32 = 2;
+pub const CODE_BUILDING: i32 = 3;
+
+pub const MSG_ILLEGAL: &'static str = "非法id";
 
 impl BuildStatus {
     pub fn success() -> Self {
@@ -111,14 +114,14 @@ impl BuildStatus {
 
     pub fn waiting() -> Self {
         BuildStatus {
-            code: 2,
+            code: CODE_WAITING,
             msg: String::from("等待中"),
         }
     }
 
     pub fn building() -> Self {
         Self {
-            code: 3,
+            code: CODE_BUILDING,
             msg: String::from("编译中"),
         }
     }
@@ -147,13 +150,16 @@ pub struct AppParams {
     pub fid: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub operate: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub update_time: Option<DateTime>,
 }
 
 impl AppParams {
     pub fn new(params: BuildParams, operate: &str, email: Option<String>) -> Self {
+        let date = DateTime(chrono::Utc::now());
         Self {
             id: None,
-            date: DateTime(chrono::Utc::now()),
+            date,
             build_id: Uuid::new_v4(),
             status: BuildStatus::waiting(),
             params,
@@ -161,6 +167,7 @@ impl AppParams {
             email,
             fid: Some("".to_string()),
             operate: Some(operate.to_string()),
+            update_time: Some(date),
         }
     }
 

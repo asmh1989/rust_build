@@ -174,7 +174,7 @@ pub async fn init_redis(url: &'static str, pub_sub: bool) {
                                     let result: RedisResult<String> = msg.get_payload();
 
                                     if let Ok(id) = result {
-                                        crate::work::start_build_by_id(&id).await;
+                                        crate::work::start_build_by_id(id).await;
                                     }
                                 }
                             }

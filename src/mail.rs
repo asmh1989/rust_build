@@ -16,7 +16,7 @@ use regex::Regex;
 use crate::{
     build_params::AppParams,
     db::{Db, COLLECTION_BUILD},
-    filter_build_id, get_upload_url,
+    filter_build_id, get_default, get_upload_url,
 };
 
 async fn _email(mail: &str, title: &str, content: &str) -> Result<(), String> {
@@ -114,9 +114,9 @@ pub async fn send_email(app: &AppParams) -> Result<(), String> {
                         id,
                         converted,
                         app.build_time,
-                        get_upload_url!(app.fid.clone().unwrap()),
+                        get_upload_url!(get_default!(app.fid)),
                         serde_json::to_string_pretty(&app.params.version).unwrap(),
-                        app.operate.clone().unwrap(),
+                        get_default!(app.operate),
                     ),
                 )
             } else {
@@ -141,7 +141,7 @@ pub async fn send_email(app: &AppParams) -> Result<(), String> {
                         id,
                         converted,
                         app.status.msg,
-                        app.operate.clone().unwrap()
+                        get_default!(app.operate)
                     ),
                 )
             };

@@ -23,6 +23,17 @@ macro_rules! result_err {
     };
 }
 
+#[macro_export]
+macro_rules! get_default {
+    ($e:expr) => {
+        if $e.is_none() {
+            "".to_string()
+        } else {
+            $e.clone().unwrap()
+        }
+    };
+}
+
 pub fn clone_src(
     url: &str,
     path: &str,
