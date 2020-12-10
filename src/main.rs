@@ -12,6 +12,7 @@ use actix_web::{
     error::InternalError, error::JsonPayloadError, get, middleware::Logger, web, App, Error,
     HttpRequest, HttpServer, Responder,
 };
+use args::Opt;
 use bson::doc;
 use build_params::{AppParams, CODE_BUILDING, CODE_WAITING};
 use chrono::{DateTime, NaiveDateTime, Utc};
@@ -22,6 +23,9 @@ use mongodb::options::FindOptions;
 use serde_json::Value;
 use tokio::time::interval;
 
+use structopt::StructOpt;
+
+mod args;
 mod build_params;
 mod config;
 mod db;
@@ -135,18 +139,47 @@ fn time_work() {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    // 修改config
-    // config::Config::get_instance()
-    // .lock()
-    // .unwrap()
-    // .set_cache_home("/tmp");
+    let mut opt: Opt = Opt::from_args();
 
     config::Config::get_instance();
 
+    if opt.ip.is_empty() {
+        opt.ip = whoami::hostname();
+    } else {
+        config::Config::get_instance()
+            .lock()
+            .unwrap()
+            .set_ip(&opt.ip);
+    }
+
+    if !opt.cache_path.is_empty() {
+        config::Config::get_instance()
+            .lock()
+            .unwrap()
+            .set_cache_home(&opt.cache_path);
+    }
+
+    if !opt.android_home.is_empty() {
+        config::Config::get_instance()
+            .lock()
+            .unwrap()
+            .set_android_home(&opt.android_home);
+    }
+
+    const VERSION: &'static str = env!("CARGO_PKG_VERSION");
+
+    // 打印版本
+    if opt.version {
+        info!("{}", VERSION);
+        return Ok(());
+    }
+
+    info!("{:#?}", opt);
+
     info!("start ...");
 
-    db::init_db("mongodb://192.168.2.36:27017").await;
-    redis::init_redis("redis://192.168.2.36:6379", true).await;
+    db::init_db(&format!("mongodb://{}", opt.sql)).await;
+    redis::init_redis(format!("redis://{}", opt.redis), true).await;
 
     time_work();
 
@@ -161,7 +194,7 @@ async fn main() -> std::io::Result<()> {
             )
             .route("/app/query/{id}", web::get().to(http::MyRoute::query))
     })
-    .bind("127.0.0.1:3771")?
+    .bind(format!("127.0.0.1:{}", opt.port))?
     .run()
     .await
 }

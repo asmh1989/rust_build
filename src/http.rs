@@ -7,6 +7,7 @@ use serde_json::json;
 
 use crate::{
     build_params::{self, AppParams, BuildParams, MSG_ILLEGAL},
+    config::Config,
     db::{Db, COLLECTION_BUILD},
     filter_build_id, get_upload_url,
     http_response::{response_error, response_ok},
@@ -27,7 +28,7 @@ impl MyRoute {
     pub async fn build(params: web::Json<BuildParams>) -> impl Responder {
         let build_p = params.0;
         let email = build_p.email.clone();
-        let app = AppParams::new(build_p, "", email);
+        let app = AppParams::new(build_p, &Config::ip(), email);
         let id = app.build_id.clone();
 
         if let Err(e) = app.save_db().await {

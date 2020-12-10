@@ -322,7 +322,7 @@ mod tests {
 
         let params = result.unwrap();
 
-        let mut app = AppParams::new(params, "", None);
+        let mut app = AppParams::new(params, "test", None);
         app.build_id = Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap();
         let path = super::get_source_path(app.build_id);
 

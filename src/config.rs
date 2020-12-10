@@ -9,6 +9,7 @@ pub struct Config {
     pub java_home: String,
     pub cache_home: String,
     pub building: bool,
+    pub ip: String,
 }
 
 impl Config {
@@ -27,6 +28,7 @@ impl Config {
                         java_home: "".to_string(),
                         cache_home: format!("{}/.mdm_build", env::var("HOME").unwrap()).to_string(),
                         building: false,
+                        ip: whoami::hostname(),
                     }))
                 })
                 .clone()
@@ -35,6 +37,10 @@ impl Config {
 
     pub fn set_cache_home(&mut self, cache: &str) {
         self.cache_home = cache.to_string();
+    }
+
+    pub fn set_ip(&mut self, ip: &str) {
+        self.ip = ip.to_string();
     }
 
     pub fn set_java_home(&mut self, java: &str) {
@@ -59,6 +65,10 @@ impl Config {
 
     pub fn is_building() -> bool {
         Config::get_instance().lock().unwrap().building
+    }
+
+    pub fn ip() -> String {
+        Config::get_instance().lock().unwrap().ip.clone()
     }
 
     pub fn change_building(b: bool) {

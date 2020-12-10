@@ -132,8 +132,8 @@ impl Redis {
     }
 }
 
-pub async fn init_redis(url: &'static str, pub_sub: bool) {
-    let client = redis::Client::open(url).unwrap();
+pub async fn init_redis(url: String, pub_sub: bool) {
+    let client = redis::Client::open(url.clone()).unwrap();
     let result = client.get_tokio_connection_manager().await;
 
     match result {
@@ -262,7 +262,7 @@ mod tests {
     #[actix_rt::test]
     async fn test_redis_lock() {
         crate::config::Config::get_instance();
-        super::init_redis("redis://192.168.2.36:6379", false).await;
+        super::init_redis("redis://192.168.2.36:6379".to_string(), false).await;
 
         let key = "123";
         assert!(super::Redis::lock(key).await);
@@ -280,7 +280,7 @@ mod tests {
     #[actix_rt::test]
     async fn test_redis() {
         crate::config::Config::get_instance();
-        super::init_redis("redis://192.168.2.36:6379", false).await;
+        super::init_redis("redis://192.168.2.36:6379".to_string(), false).await;
 
         // let r = redis::Client::open("redis://192.168.2.36:6379").unwrap();
         // super::lll(r).await.is_ok();
