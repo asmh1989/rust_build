@@ -1,5 +1,3 @@
-use std::thread;
-
 use actix_web::{web, HttpResponse, Responder};
 use bson::Bson;
 use build_params::CODE_ILLEGAL;
@@ -9,11 +7,10 @@ use serde_json::json;
 
 use crate::{
     build_params::{self, AppParams, BuildParams, MSG_ILLEGAL},
-    config::Config,
     db::{Db, COLLECTION_BUILD},
     filter_build_id, get_upload_url,
     http_response::{response_error, response_ok},
-    work,
+    redis::BUILD_CHANNEL,
 };
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -29,25 +26,15 @@ pub struct MyRoute;
 impl MyRoute {
     pub async fn build(params: web::Json<BuildParams>) -> impl Responder {
         let build_p = params.0;
-        let app = AppParams::new(build_p, "");
+        let email = build_p.email.clone();
+        let app = AppParams::new(build_p, "", email);
         let id = app.build_id.clone();
 
         if let Err(e) = app.save_db().await {
             return response_error(e);
         }
 
-        if !Config::is_building() {
-            Config::change_building(true);
-
-            thread::spawn(|| {
-                let mut rt = tokio::runtime::Runtime::new().unwrap();
-                rt.block_on(async move {
-                    work::start_build(app).await;
-                });
-            });
-        } else {
-            info!("waiting ....")
-        }
+        crate::redis::Redis::publish(BUILD_CHANNEL, &id.to_string()).await;
 
         response_ok(json!({ "id": id }))
     }

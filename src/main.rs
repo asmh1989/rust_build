@@ -15,6 +15,7 @@ mod framework;
 mod http;
 mod http_response;
 mod mail;
+mod redis;
 mod shell;
 mod utils;
 mod weed;
@@ -47,6 +48,7 @@ async fn main() -> std::io::Result<()> {
     info!("start ...");
 
     db::init_db("mongodb://192.168.2.36:27017").await;
+    redis::init_redis("redis://192.168.2.36:6379", true).await;
 
     HttpServer::new(|| {
         App::new()

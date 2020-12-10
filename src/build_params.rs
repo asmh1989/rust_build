@@ -141,12 +141,16 @@ pub struct AppParams {
     pub status: BuildStatus,
     pub params: BuildParams,
     pub build_time: i16,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub fid: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub operate: Option<String>,
 }
 
 impl AppParams {
-    pub fn new(params: BuildParams, operate: &str) -> Self {
+    pub fn new(params: BuildParams, operate: &str, email: Option<String>) -> Self {
         Self {
             id: None,
             date: DateTime(chrono::Utc::now()),
@@ -154,6 +158,7 @@ impl AppParams {
             status: BuildStatus::waiting(),
             params,
             build_time: 0,
+            email,
             fid: Some("".to_string()),
             operate: Some(operate.to_string()),
         }

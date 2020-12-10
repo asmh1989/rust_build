@@ -1,10 +1,10 @@
-use std::{collections::HashMap, fs, path::Path, process::Command};
+use std::{collections::HashMap, fs, path::Path, process::Command, thread};
 
+use bson::Bson;
 use log::{error, info, warn};
 use shell::Shell;
 use uuid::Uuid;
 
-use crate::shell;
 use crate::utils;
 use crate::{build_params, config};
 use crate::{
@@ -12,6 +12,10 @@ use crate::{
     framework::base::BuildStep,
 };
 use crate::{config::Config, framework::*};
+use crate::{
+    db::{Db, COLLECTION_BUILD},
+    filter_build_id, shell,
+};
 
 pub fn get_source_path(build_id: Uuid) -> String {
     let path = config::Config::cache_home();
@@ -170,46 +174,83 @@ pub async fn start(app: &mut AppParams) -> Result<(), String> {
     Ok(())
 }
 
-#[warn(unused_must_use)]
-pub async fn start_build(mut app: AppParams) {
-    info!("start build {} ... ", app.build_id);
-    let time = chrono::Utc::now().timestamp();
-    app.status = build_params::BuildStatus::building();
-    if let Err(e) = app.save_db().await {
-        info!("{}", e);
-    }
-    match start(&mut app).await {
-        Ok(_) => {
-            info!("{}  build finish ....", app.build_id);
+pub async fn start_build_by_id(id: &str) {
+    let doc = filter_build_id!(id);
 
-            app.build_time = (chrono::Utc::now().timestamp() - time) as i16;
+    let result = Db::find_one(COLLECTION_BUILD, doc, None).await;
 
-            app.status = build_params::BuildStatus::success();
-            if let Err(e) = app.save_db().await {
-                info!("{}", e);
+    match result {
+        Ok(doc) => {
+            if let Some(doc) = doc {
+                let result = bson::from_bson::<AppParams>(Bson::Document(doc));
+                match result {
+                    Ok(app) => {
+                        start_build(app);
+                    }
+                    Err(err) => {
+                        info!("{}", err);
+                    }
+                }
+            } else {
+                info!("start_build_by_id db not find");
             }
         }
-        Err(e) => {
-            warn!(
-                "{} error \n------------------------\n{}\n------------------------",
-                app.build_id, e
-            );
-
-            app.status = build_params::BuildStatus::failed(e);
-            if let Err(err) = app.save_db().await {
-                info!("{}", err);
-            }
-        }
-    }
-
-    match crate::mail::send_email(&app).await {
-        Ok(_) => {}
         Err(err) => {
-            info!("send mail err = {}", err)
+            info!("start_build_by_id err = {}", err);
         }
     }
+}
 
-    Config::change_building(false);
+pub fn start_build(mut app: AppParams) {
+    if !Config::is_building() {
+        Config::change_building(true);
+
+        thread::spawn(|| {
+            let mut rt = tokio::runtime::Runtime::new().unwrap();
+            rt.block_on(async move {
+                info!("start build {} ... ", app.build_id);
+                let time = chrono::Utc::now().timestamp();
+                app.status = build_params::BuildStatus::building();
+                if let Err(e) = app.save_db().await {
+                    info!("{}", e);
+                }
+                match start(&mut app).await {
+                    Ok(_) => {
+                        info!("{}  build finish ....", app.build_id);
+
+                        app.build_time = (chrono::Utc::now().timestamp() - time) as i16;
+
+                        app.status = build_params::BuildStatus::success();
+                        if let Err(e) = app.save_db().await {
+                            info!("{}", e);
+                        }
+                    }
+                    Err(e) => {
+                        warn!(
+                            "{} error \n------------------------\n{}\n------------------------",
+                            app.build_id, e
+                        );
+
+                        app.status = build_params::BuildStatus::failed(e);
+                        if let Err(err) = app.save_db().await {
+                            info!("{}", err);
+                        }
+                    }
+                }
+
+                match crate::mail::send_email(&app).await {
+                    Ok(_) => {}
+                    Err(err) => {
+                        info!("send mail err = {}", err)
+                    }
+                }
+
+                Config::change_building(false);
+            });
+        });
+    } else {
+        info!("waiting ....")
+    }
 }
 
 #[cfg(test)]
@@ -261,7 +302,7 @@ mod tests {
 
         let params = result.unwrap();
 
-        let mut app = AppParams::new(params, "");
+        let mut app = AppParams::new(params, "", None);
         app.build_id = Uuid::parse_str("936DA01F9ABD4d9d80C702AF85C822A8").unwrap();
         let path = super::get_source_path(app.build_id);
 

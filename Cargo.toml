@@ -46,6 +46,8 @@ native-tls = "0.2"
 
 regex = "1.4.2"
 
+redis = { version = "0.17.0", features = ["tokio-comp", "connection-manager", "aio"] }
+
 
 [dev-dependencies]
 actix-rt = "1.1.1"
