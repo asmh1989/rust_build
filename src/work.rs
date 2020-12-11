@@ -84,7 +84,7 @@ pub fn release_build(app: &AppParams) -> Result<(), String> {
 pub async fn upload_build(app: &mut AppParams) -> Result<(), String> {
     let dir = get_source_path(app.build_id);
     let shell = shell::Shell::new(&dir);
-    let apk = shell.run("fd -I -a  'release.apk'")?;
+    let apk = shell.run("find `pwd` -name '*release.apk'")?;
     info!("found apk ... {}", apk);
 
     let fid = crate::weed::upload(
@@ -154,11 +154,11 @@ pub fn change_config(app: &AppParams) -> Result<(), String> {
     let gradle_file = format!("{}/app/build.gradle", source);
 
     if let Some(_) = &app.params.version.version_code {
-        shell.run(&format!("sd 'versionCode .*' '' {} ", gradle_file))?;
+        shell.run(&format!("sed -i -e '/versionCode .*/d' {} ", gradle_file))?;
     }
 
     if let Some(_) = &app.params.version.version_name {
-        shell.run(&format!("sd 'versionName .*' '' {} ", gradle_file))?;
+        shell.run(&format!("sed -i -e '/versionName .*/d' {} ", gradle_file))?;
     }
 
     Ok(())

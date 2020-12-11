@@ -1,3 +1,4 @@
+use java_properties::{read, write};
 use log::{debug, error, info};
 use quick_xml::{
     events::BytesStart,
@@ -7,7 +8,7 @@ use quick_xml::{
 use std::{
     collections::HashMap,
     fs::{remove_dir_all, File},
-    io::{Cursor, Write},
+    io::{BufReader, BufWriter, Cursor, Write},
     path::Path,
     str::from_utf8,
 };
@@ -19,7 +20,10 @@ use crate::shell::Shell;
 #[macro_export]
 macro_rules! result_err {
     () => {
-        |err| format!("{:?}", err)
+        |err| {
+            info!("err = {}", err);
+            format!("{:?}", err)
+        }
     };
 }
 
@@ -214,19 +218,17 @@ pub fn change_properies_file(path: &str, config: &HashMap<String, String>) -> Re
     }
 
     match File::open(path) {
-        Ok(_) => {
-            let shell = Shell::new("/tmp");
+        Ok(f) => {
+            let mut map2 = read(BufReader::new(f)).map_err(result_err!())?;
+            // let shell = Shell::new("/tmp");
 
-            config.iter().for_each(|f| {
-                match shell.run(&format!("batcat {} | rg ^{}=", path, f.0)) {
-                    Ok(_) => {
-                        shell.run(&format!("sd '^{}.*' '{}={}' {}", f.0, f.0, f.1, path));
-                    }
-                    Err(_) => {
-                        shell.run(&format!("echo \"{}={}\" >> {}", f.0, f.1, path));
-                    }
-                }
-            });
+            for (key, value) in config {
+                map2.insert(key.clone(), value.clone());
+            }
+
+            let f = File::create(path).map_err(result_err!())?;
+
+            write(BufWriter::new(f), &map2).map_err(result_err!())?;
 
             Ok(())
         }
@@ -264,10 +266,10 @@ mod tests {
     fn properies_test() {
         crate::config::Config::get_instance();
         let mut meta: HashMap<String, String> = HashMap::new();
-        meta.insert("model".to_string(), "test1".to_string());
-        meta.insert("brank1".to_string(), "test2".to_string());
-
-        assert!(super::change_properies_file("/tmp/test.prop", &meta).is_ok());
+        meta.insert("model".to_string(), "123".to_string());
+        meta.insert("brank1".to_string(), "456".to_string());
+        let result = super::change_properies_file("/tmp/123.prop", &meta);
+        assert!(result.is_ok());
     }
 
     #[test]

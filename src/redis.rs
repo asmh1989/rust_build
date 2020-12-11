@@ -171,11 +171,15 @@ pub async fn init_redis(url: String, pub_sub: bool) {
 
                             if let Some(msg) = data {
                                 if msg.get_channel_name() == BUILD_CHANNEL {
-                                    info!("found channel = {}", msg.get_channel_name());
-
                                     let result: RedisResult<String> = msg.get_payload();
 
                                     if let Ok(id) = result {
+                                        info!(
+                                            "found channel = {}, id = {}",
+                                            msg.get_channel_name(),
+                                            id
+                                        );
+
                                         crate::work::start_build_by_id(id).await;
                                     }
                                 }

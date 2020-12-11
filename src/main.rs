@@ -195,7 +195,7 @@ async fn main() -> std::io::Result<()> {
             )
             .route("/app/query/{id}", web::get().to(http::MyRoute::query))
     })
-    .bind(format!("127.0.0.1:{}", opt.port))?
+    .bind(format!("0.0.0.0:{}", opt.port))?
     .run()
     .await
 }
