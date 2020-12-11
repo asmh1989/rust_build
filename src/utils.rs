@@ -42,6 +42,10 @@ pub fn clone_src(
 ) -> Result<(), String> {
     info!("start git clone {} to {}", url, path);
 
+    if file_exist(path) {
+        remove_dir(path);
+    }
+
     let shell = Shell::new("/tmp");
     let mut command = format!("git clone {} ", url);
 
@@ -69,7 +73,7 @@ pub fn remove_dir(name: &str) {
     let f = File::open(name);
 
     if let Ok(_) = f {
-        remove_dir_all(name).expect("删除文件失败");
+        let _ = remove_dir_all(name).map_err(|err| info!("删除文件失败, {} ", err));
         debug!("delete {} success", name);
     }
 }
@@ -78,7 +82,7 @@ pub fn remove_file(name: &str) {
     let f = File::open(name);
 
     if let Ok(_) = f {
-        fs::remove_file(name).expect("删除文件失败");
+        let _ = fs::remove_file(name).map_err(|err| info!("删除文件失败 {} ", err));
         debug!("delete {} success", name);
     }
 }

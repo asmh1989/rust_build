@@ -1,5 +1,6 @@
 use std::{collections::HashMap, fs, path::Path, process::Command, thread};
 
+use crate::redis::Redis;
 use bson::Bson;
 use log::{error, info, warn};
 use shell::Shell;
@@ -185,7 +186,7 @@ pub async fn start_build_by_id(id: String) {
                 let result = bson::from_bson::<AppParams>(Bson::Document(doc));
                 match result {
                     Ok(app) => {
-                        start_build(app);
+                        start_build(app).await;
                     }
                     Err(err) => {
                         info!("{}", err);
@@ -201,8 +202,11 @@ pub async fn start_build_by_id(id: String) {
     }
 }
 
-pub fn start_build(mut app: AppParams) {
+pub async fn start_build(mut app: AppParams) {
     if !Config::is_building() {
+        if !Redis::lock(&app.build_id.to_string()).await {
+            return;
+        }
         Config::change_building(true);
 
         thread::spawn(|| {
@@ -264,6 +268,8 @@ pub fn start_build(mut app: AppParams) {
                         info!("send mail err = {}", err)
                     }
                 }
+
+                Redis::unlock(&app.build_id.to_string()).await;
 
                 Config::change_building(false);
             });

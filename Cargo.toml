@@ -30,7 +30,7 @@ actix-web = "3"
 tokio = { version = "0.2", features = ["full"] }
 
 reqwest = { version = "0.10", features = ["json", "stream"] }
-zip = { version = "0.5" }
+zip = { version = "0.5", features = ["bzip2"] }
 
 async-trait = "0.1.42"
 
@@ -46,7 +46,7 @@ native-tls = "0.2"
 
 regex = "1.4.2"
 
-redis = { version = "0.17.0", features = ["tokio-comp", "connection-manager", "aio"] }
+redis = { version = "0.17.0", features = ["tokio-comp", "connection-manager"] }
 
 structopt = "0.3"
 whoami = "0.9"
@@ -67,3 +67,4 @@ miniz_oxide.opt-level = 3
 [profile.release]
 incremental = true 
 debug = 0 # Set this to 1 or 2 to get more useful backtraces in debugger.
+opt-level = 'z'

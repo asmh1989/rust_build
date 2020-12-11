@@ -71,6 +71,8 @@ impl Redis {
                     .query_async(&mut con.clone())
                     .await;
                 if let Ok(i) = result {
+                    info!("lock {} {} ", key, i == 1);
+
                     if i == 1 {
                         let result: RedisResult<()> = redis::cmd("expire")
                             .arg(key)

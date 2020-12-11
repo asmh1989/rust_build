@@ -8,6 +8,7 @@ use std::{
     time::{Duration, UNIX_EPOCH},
 };
 
+use crate::redis::{Redis, BUILD_CHANNEL};
 use actix_web::{
     error::InternalError, error::JsonPayloadError, get, middleware::Logger, web, App, Error,
     HttpRequest, HttpServer, Responder,
@@ -83,7 +84,7 @@ fn time_work() {
     thread::spawn(|| {
         let mut rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async move {
-            let mut interval = interval(Duration::from_millis(5000));
+            let mut interval = interval(Duration::from_millis(8000));
             loop {
                 interval.tick().await;
 
@@ -112,7 +113,7 @@ fn time_work() {
                         if app.status.code == CODE_WAITING {
                             info!("found waiting work id = {} ", app.build_id);
 
-                            work::start_build_by_id(app.build_id.to_string()).await;
+                            Redis::publish(BUILD_CHANNEL, &app.build_id.to_string()).await;
 
                             continue;
                         } else if app.status.code == CODE_BUILDING {
@@ -126,7 +127,7 @@ fn time_work() {
 
                             if duration.num_minutes().abs() > 20 {
                                 info!(" exception building dur = {} ", duration);
-                                work::start_build_by_id(app.build_id.to_string()).await;
+                                Redis::publish(BUILD_CHANNEL, &app.build_id.to_string()).await;
                                 continue;
                             }
                         }
@@ -179,7 +180,7 @@ async fn main() -> std::io::Result<()> {
     info!("start ...");
 
     db::init_db(&format!("mongodb://{}", opt.sql)).await;
-    redis::init_redis(format!("redis://{}", opt.redis), true).await;
+    redis::init_redis(format!("redis://{}", opt.redis), !opt.disable_manager_build).await;
 
     time_work();
 

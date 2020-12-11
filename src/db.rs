@@ -105,7 +105,7 @@ impl Db {
         let result = collection.find_one(filter.clone(), None).await?;
 
         if let Some(_) = result {
-            info!("db update");
+            // info!("db update");
             collection
                 .update_one(filter.clone(), update_doc, None)
                 .await?;
