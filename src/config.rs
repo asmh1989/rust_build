@@ -1,8 +1,6 @@
 use std::env;
 use std::sync::Arc;
 use std::sync::Mutex;
-
-use log::info;
 #[derive(Clone, Debug)]
 pub struct Config {
     pub android_home: String,
@@ -21,7 +19,7 @@ impl Config {
             CONFIG
                 .get_or_insert_with(|| {
                     log4rs::init_file("config/log4rs.yaml", Default::default()).unwrap();
-                    info!("log4rs init ...");
+                    // info!("log4rs init ...");
                     // 初始化单例对象的代码
                     Arc::new(Mutex::new(Config {
                         android_home: "/opt/android/sdk".to_string(),

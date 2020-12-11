@@ -146,12 +146,12 @@ fn time_work() {
 async fn main() -> std::io::Result<()> {
     let mut opt: Opt = Opt::from_args();
 
-        // 打印版本
+    // 打印版本
     if opt.version {
-        printf!("{}", VERSION);
+        println!("{}", VERSION);
         return Ok(());
     }
-        
+
     config::Config::get_instance();
 
     if opt.ip.is_empty() {
@@ -168,6 +168,8 @@ async fn main() -> std::io::Result<()> {
             .lock()
             .unwrap()
             .set_cache_home(&opt.cache_path);
+    } else {
+        opt.cache_path = config::Config::cache_home();
     }
 
     if !opt.android_home.is_empty() {
@@ -175,10 +177,11 @@ async fn main() -> std::io::Result<()> {
             .lock()
             .unwrap()
             .set_android_home(&opt.android_home);
+    } else {
+        opt.android_home = config::Config::android_home();
     }
 
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
-
 
     info!("{:#?}", opt);
 
@@ -189,18 +192,46 @@ async fn main() -> std::io::Result<()> {
 
     time_work();
 
-    HttpServer::new(|| {
-        App::new()
-            .wrap(Logger::new("%U %s %D"))
-            .service(hello)
-            .service(
-                web::resource("/app/build")
-                    .data(web::JsonConfig::default().error_handler(post_error))
-                    .route(web::post().to(http::MyRoute::build)),
-            )
-            .route("/app/query/{id}", web::get().to(http::MyRoute::query))
-    })
-    .bind(format!("0.0.0.0:{}", opt.port))?
-    .run()
-    .await
+    tokio::time::delay_for(Duration::from_millis(100)).await;
+
+    if opt.manager {
+        info!(
+            r#"
+
+-----------------------------------------------------------------------------
+            start rust build manager  server {} 
+-----------------------------------------------------------------------------
+"#,
+            VERSION
+        );
+
+        HttpServer::new(|| {
+            App::new()
+                .wrap(Logger::new("%U %s %D"))
+                .service(hello)
+                .service(
+                    web::resource("/app/build")
+                        .data(web::JsonConfig::default().error_handler(post_error))
+                        .route(web::post().to(http::MyRoute::build)),
+                )
+                .route("/app/query/{id}", web::get().to(http::MyRoute::query))
+        })
+        .bind(format!("0.0.0.0:{}", opt.port))?
+        .run()
+        .await
+    } else {
+        info!(
+            r#"
+
+-----------------------------------------------------------------------------
+            start rust build server {} 
+-----------------------------------------------------------------------------
+"#,
+            VERSION
+        );
+        let mut interval = interval(Duration::from_millis(80000));
+        loop {
+            interval.tick().await;
+        }
+    }
 }

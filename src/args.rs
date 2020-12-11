@@ -9,9 +9,6 @@ pub struct Opt {
     #[structopt(long = "manager", help = "打包管理服务")]
     pub manager: bool,
 
-    #[structopt(long = "disable-weed", help = "打包结果不上传到文件服务")]
-    pub disable_weed: bool,
-
     #[structopt(
         long = "disable-manager-build",
         help = "打包管理服务, 不能同时进行打包任务"
