@@ -53,6 +53,10 @@ fn post_error(err: JsonPayloadError, _: &HttpRequest) -> Error {
 fn clear_cache() -> io::Result<()> {
     let path = config::Config::cache_home() + "/apps";
 
+    if !utils::file_exist(&path) {
+        std::fs::create_dir_all(path.clone()).unwrap();
+    }
+
     for entry in read_dir(path)? {
         let entry = entry?;
         let path = entry.path();
