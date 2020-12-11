@@ -146,6 +146,12 @@ fn time_work() {
 async fn main() -> std::io::Result<()> {
     let mut opt: Opt = Opt::from_args();
 
+        // 打印版本
+    if opt.version {
+        printf!("{}", VERSION);
+        return Ok(());
+    }
+        
     config::Config::get_instance();
 
     if opt.ip.is_empty() {
@@ -173,11 +179,6 @@ async fn main() -> std::io::Result<()> {
 
     const VERSION: &'static str = env!("CARGO_PKG_VERSION");
 
-    // 打印版本
-    if opt.version {
-        info!("{}", VERSION);
-        return Ok(());
-    }
 
     info!("{:#?}", opt);
 

@@ -1,0 +1,6 @@
+.git
+.vscode
+log
+target
+!target/release/rust_build
+src
