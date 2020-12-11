@@ -151,12 +151,13 @@ pub async fn init_redis(url: String, pub_sub: bool) {
             }
 
             if !pub_sub {
+                info!("close build work listener ....");
                 return;
             }
 
             // 开启订阅
             thread::spawn(move || {
-                info!("start listern redis channel...");
+                info!("start listern redis channel to listener build work ....");
                 let mut rt = tokio::runtime::Runtime::new().unwrap();
                 rt.block_on(async move {
                     loop {

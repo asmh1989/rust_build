@@ -9,11 +9,8 @@ pub struct Opt {
     #[structopt(long = "manager", help = "打包管理服务")]
     pub manager: bool,
 
-    #[structopt(
-        long = "disable-manager-build",
-        help = "打包管理服务, 不能同时进行打包任务"
-    )]
-    pub disable_manager_build: bool,
+    #[structopt(long = "manager-build", help = "打包管理服务, 同时进行打包任务")]
+    pub manager_build: bool,
 
     #[structopt(short = "p", long = "port", default_value = "7002", help = "端口")]
     pub port: u16,

@@ -84,8 +84,8 @@ fn clear_cache() -> io::Result<()> {
     Ok(())
 }
 
-fn time_work() {
-    thread::spawn(|| {
+fn time_work(manager: bool) {
+    thread::spawn(move || {
         let mut rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async move {
             let mut interval = interval(Duration::from_millis(8000));
@@ -94,6 +94,10 @@ fn time_work() {
 
                 if let Err(err) = clear_cache() {
                     info!(" clear cache error = {}", err);
+                }
+
+                if !manager {
+                    continue;
                 }
 
                 let filter = doc! {"code":{"$gt": 1}};
@@ -188,9 +192,13 @@ async fn main() -> std::io::Result<()> {
     info!("start ...");
 
     db::init_db(&format!("mongodb://{}", opt.sql)).await;
-    redis::init_redis(format!("redis://{}", opt.redis), !opt.disable_manager_build).await;
+    redis::init_redis(
+        format!("redis://{}", opt.redis),
+        !opt.manager || opt.manager_build,
+    )
+    .await;
 
-    time_work();
+    time_work(opt.manager);
 
     tokio::time::delay_for(Duration::from_millis(100)).await;
 
@@ -199,7 +207,7 @@ async fn main() -> std::io::Result<()> {
             r#"
 
 -----------------------------------------------------------------------------
-            start rust build manager  server {} 
+            start rust build manager server {} 
 -----------------------------------------------------------------------------
 "#,
             VERSION

@@ -215,6 +215,7 @@ pub async fn start_build(mut app: AppParams) {
                 info!("start build {} ... ", app.build_id);
                 let time = chrono::Utc::now().timestamp();
                 app.status = build_params::BuildStatus::building();
+                app.operate = Some(Config::ip());
                 if let Err(e) = app.save_db().await {
                     info!("{}", e);
                 }
