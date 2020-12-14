@@ -1,7 +1,4 @@
-use std::{
-    sync::{Arc, Mutex},
-    time::Duration,
-};
+use std::{sync::Arc, time::Duration};
 
 use bson::{Bson, Document};
 use log::info;
@@ -10,6 +7,7 @@ use mongodb::{
     options::{ClientOptions, FindOneOptions, FindOptions},
     Client,
 };
+use once_cell::sync::OnceCell;
 use tokio::stream::StreamExt;
 
 use std::result::Result;
@@ -24,28 +22,17 @@ macro_rules! filter_build_id {
 }
 
 #[derive(Clone, Debug)]
-pub struct Db {
-    client: Client,
-}
+pub struct Db;
 
 const TABLE_NAME: &'static str = "build_data";
 pub const COLLECTION_BUILD: &'static str = "build";
 const KEY_UPDATE_TIME: &'static str = "update_time";
 
-static mut DB: Option<Arc<Mutex<Db>>> = None;
-
-static mut CLIENT_OPTIONS: Option<ClientOptions> = None;
+static INSTANCE: OnceCell<Arc<Client>> = OnceCell::new();
 
 impl Db {
-    pub fn get_instance() -> Arc<Mutex<Db>> {
-        unsafe {
-            DB.get_or_insert_with(|| {
-                Arc::new(Mutex::new(Db {
-                    client: Client::with_options(CLIENT_OPTIONS.clone().unwrap()).unwrap(),
-                }))
-            })
-            .clone()
-        }
+    pub fn get_instance() -> &'static Arc<Client> {
+        INSTANCE.get().expect("db need init first")
     }
 
     pub async fn find(
@@ -54,7 +41,7 @@ impl Db {
         options: impl Into<Option<FindOptions>>,
         call_back: &dyn Fn(AppParams),
     ) -> Result<(), Error> {
-        let client = Db::get_instance().lock().unwrap().client.clone();
+        let client = Db::get_instance();
         let db = client.database(TABLE_NAME);
         let collection = db.collection(table);
 
@@ -87,7 +74,7 @@ impl Db {
         filter: impl Into<Option<Document>>,
         options: impl Into<Option<FindOneOptions>>,
     ) -> Result<Option<Document>, Error> {
-        let client = Db::get_instance().lock().unwrap().client.clone();
+        let client = Db::get_instance();
         let db = client.database(TABLE_NAME);
         let collection = db.collection(table);
 
@@ -95,7 +82,7 @@ impl Db {
     }
 
     pub async fn save(table: &str, filter: Document, app: Document) -> Result<(), Error> {
-        let client = Db::get_instance().lock().unwrap().client.clone();
+        let client = Db::get_instance();
         let db = client.database(TABLE_NAME);
         let collection = db.collection(table);
 
@@ -119,7 +106,7 @@ impl Db {
     }
 
     pub async fn delete(table: &str, filter: Document) -> Result<(), Error> {
-        let client = Db::get_instance().lock().unwrap().client.clone();
+        let client = Db::get_instance();
         let db = client.database(TABLE_NAME);
         let collection = db.collection(table);
 
@@ -131,7 +118,7 @@ impl Db {
     }
 
     pub async fn contians(table: &str, filter: Document) -> bool {
-        let client = Db::get_instance().lock().unwrap().client.clone();
+        let client = Db::get_instance();
         let db = client.database(TABLE_NAME);
         let collection = db.collection(table);
 
@@ -151,17 +138,21 @@ pub async fn init_db(url: &str) {
     // 选择超时
     client_options.server_selection_timeout = Some(Duration::new(8, 0));
 
-    unsafe {
-        CLIENT_OPTIONS = Some(client_options.clone());
+    INSTANCE
+        .set(Arc::new(Client::with_options(client_options).unwrap()))
+        .expect("db init error");
 
-        // Rust中使用可变静态变量都是unsafe的
-        DB.get_or_insert_with(|| {
-            // 初始化单例对象的代码
-            Arc::new(Mutex::new(Db {
-                client: Client::with_options(client_options).unwrap(),
-            }))
-        });
-    }
+    // unsafe {
+    //     CLIENT_OPTIONS = Some(client_options.clone());
+
+    //     // Rust中使用可变静态变量都是unsafe的
+    //     DB.get_or_insert_with(|| {
+    //         // 初始化单例对象的代码
+    //         Arc::new(Mutex::new(Db {
+    //             client: Client::with_options(client_options).unwrap(),
+    //         }))
+    //     });
+    // }
 }
 
 #[cfg(test)]

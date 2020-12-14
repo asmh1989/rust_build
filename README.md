@@ -2,6 +2,12 @@
 
 rust build web server
 
+### rust openssl depedences
+
+```
+sudo apt install openssl libssl-devel
+```
+
 ### CHACNGELOG
 
 #### 0.2.0

@@ -36,6 +36,8 @@ async-trait = "0.1.42"
 
 tokio-util = { version = "0.3", features = ["codec"] }
 
+once_cell = "1.5.2"
+
 # lettre = { version = "0.10.0-alpha.4", feature = ["tokio02", "native-tls"] }
 
 lettre = "0.9.5"
@@ -51,9 +53,12 @@ redis = { version = "0.17.0", features = ["tokio-comp", "connection-manager"] }
 structopt = "0.3"
 whoami = "0.9"
 java-properties = "1.3.0"
+actix-rt = "1.1.1"
+
 
 [dev-dependencies]
 actix-rt = "1.1.1"
+thread-id = "3.3.0"
 
 
 [profile.dev]
@@ -63,7 +68,6 @@ debug = 0
 
 [profile.dev.package]
 # This speeds up `cargo xtask dist`.
-miniz_oxide.opt-level = 3
 
 [profile.release]
 incremental = true 

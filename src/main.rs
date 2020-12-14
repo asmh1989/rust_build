@@ -1,10 +1,9 @@
 #![allow(dead_code)]
 
 use std::{
-    fs::{metadata, read_dir, remove_dir_all},
+    fs::{metadata, read_dir, remove_dir_all, remove_file},
     io,
     sync::{Arc, Mutex},
-    thread,
     time::{Duration, UNIX_EPOCH},
 };
 
@@ -61,7 +60,9 @@ fn clear_cache() -> io::Result<()> {
         let entry = entry?;
         let path = entry.path();
 
-        let time = metadata(path.clone())?.modified()?;
+        let meta = metadata(path.clone())?;
+
+        let time = meta.modified()?;
         let time = time.duration_since(UNIX_EPOCH).unwrap();
 
         let time = DateTime::<Utc>::from_utc(
@@ -77,73 +78,74 @@ fn clear_cache() -> io::Result<()> {
                 duration.num_days().abs()
             );
 
-            remove_dir_all(path)?;
+            if meta.is_dir() {
+                remove_dir_all(path)?;
+            } else {
+                remove_file(path)?;
+            }
         }
     }
 
     Ok(())
 }
 
-fn time_work(manager: bool) {
-    thread::spawn(move || {
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
-        rt.block_on(async move {
-            let mut interval = interval(Duration::from_millis(8000));
-            loop {
-                interval.tick().await;
+async fn time_work(manager: bool) {
+    tokio::time::delay_for(Duration::from_millis(1000)).await;
 
-                if let Err(err) = clear_cache() {
-                    info!(" clear cache error = {}", err);
-                }
+    let mut interval = interval(Duration::from_millis(8000));
+    loop {
+        interval.tick().await;
 
-                if !manager {
+        if let Err(err) = clear_cache() {
+            info!(" clear cache error = {}", err);
+        }
+
+        if !manager {
+            continue;
+        }
+
+        let filter = doc! {"code":{"$gt": 1}};
+
+        let find_options = FindOptions::builder()
+            .sort(doc! { "date": -1 })
+            .limit(Some(20))
+            .build();
+
+        let vec: Arc<Mutex<Vec<AppParams>>> = Arc::new(Mutex::new(Vec::new()));
+
+        let result = Db::find(COLLECTION_BUILD, filter, find_options, &|app| {
+            vec.lock().unwrap().push(app)
+        })
+        .await;
+
+        if result.is_err() {
+            info!("find error : {:?}", result.err());
+        } else {
+            for app in vec.lock().unwrap().iter() {
+                if app.status.code == CODE_WAITING {
+                    info!("found waiting work id = {} ", app.build_id);
+
+                    Redis::publish(BUILD_CHANNEL, &app.build_id.to_string()).await;
+
                     continue;
-                }
+                } else if app.status.code == CODE_BUILDING {
+                    let time = if app.update_time.is_none() {
+                        app.date
+                    } else {
+                        app.update_time.unwrap()
+                    };
 
-                let filter = doc! {"code":{"$gt": 1}};
+                    let duration = time.signed_duration_since(chrono::Utc::now());
 
-                let find_options = FindOptions::builder()
-                    .sort(doc! { "date": -1 })
-                    .limit(Some(20))
-                    .build();
-
-                let vec: Arc<Mutex<Vec<AppParams>>> = Arc::new(Mutex::new(Vec::new()));
-
-                let result = Db::find(COLLECTION_BUILD, filter, find_options, &|app| {
-                    vec.lock().unwrap().push(app)
-                })
-                .await;
-
-                if result.is_err() {
-                    info!("find error : {:?}", result.err());
-                } else {
-                    for app in vec.lock().unwrap().iter() {
-                        if app.status.code == CODE_WAITING {
-                            info!("found waiting work id = {} ", app.build_id);
-
-                            Redis::publish(BUILD_CHANNEL, &app.build_id.to_string()).await;
-
-                            continue;
-                        } else if app.status.code == CODE_BUILDING {
-                            let time = if app.update_time.is_none() {
-                                app.date
-                            } else {
-                                app.update_time.unwrap()
-                            };
-
-                            let duration = time.signed_duration_since(chrono::Utc::now());
-
-                            if duration.num_minutes().abs() > 20 {
-                                info!(" exception building dur = {} ", duration);
-                                Redis::publish(BUILD_CHANNEL, &app.build_id.to_string()).await;
-                                continue;
-                            }
-                        }
+                    if duration.num_minutes().abs() > 20 {
+                        info!(" exception building dur = {} ", duration);
+                        Redis::publish(BUILD_CHANNEL, &app.build_id.to_string()).await;
+                        continue;
                     }
                 }
             }
-        });
-    });
+        }
+    }
 }
 
 #[actix_web::main]
@@ -192,13 +194,18 @@ async fn main() -> std::io::Result<()> {
     info!("start ...");
 
     db::init_db(&format!("mongodb://{}", opt.sql)).await;
+
     redis::init_redis(
         format!("redis://{}", opt.redis),
         !opt.manager || opt.manager_build,
     )
     .await;
 
-    time_work(opt.manager);
+    let is_manager = opt.manager;
+
+    actix_rt::spawn(async move {
+        time_work(is_manager).await;
+    });
 
     tokio::time::delay_for(Duration::from_millis(100)).await;
 

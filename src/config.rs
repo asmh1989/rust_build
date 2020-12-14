@@ -1,6 +1,9 @@
 use std::env;
 use std::sync::Arc;
 use std::sync::Mutex;
+
+use once_cell::sync::OnceCell;
+use tokio::runtime::Runtime;
 #[derive(Clone, Debug)]
 pub struct Config {
     pub android_home: String,
@@ -8,6 +11,18 @@ pub struct Config {
     pub cache_home: String,
     pub building: bool,
     pub ip: String,
+}
+
+static RUNTIME: OnceCell<Runtime> = OnceCell::new();
+
+pub fn init_config() {
+    log4rs::init_file("config/log4rs.yaml", Default::default()).unwrap();
+
+    let _ = RUNTIME.set(Runtime::new().unwrap()).unwrap();
+}
+
+pub fn get_runtime() -> &'static Runtime {
+    RUNTIME.get().unwrap()
 }
 
 impl Config {
@@ -18,8 +33,7 @@ impl Config {
             // Rust中使用可变静态变量都是unsafe的
             CONFIG
                 .get_or_insert_with(|| {
-                    log4rs::init_file("config/log4rs.yaml", Default::default()).unwrap();
-                    // info!("log4rs init ...");
+                    init_config();
                     // 初始化单例对象的代码
                     Arc::new(Mutex::new(Config {
                         android_home: "/opt/android/sdk".to_string(),

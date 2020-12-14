@@ -1,10 +1,7 @@
-use std::{
-    sync::{Arc, Mutex},
-    thread,
-    time::Duration,
-};
+use std::{sync::Arc, thread, time::Duration};
 
 use log::{info, warn};
+use once_cell::sync::OnceCell;
 use redis::{aio::ConnectionManager, Msg, RedisResult};
 use tokio::stream::StreamExt;
 
@@ -14,18 +11,16 @@ pub struct Redis {
     value: String,
 }
 
-static mut RM: Option<Arc<Mutex<Redis>>> = None;
-pub static BUILD_CHANNEL: &'static str = "build_work";
+static RM: OnceCell<Arc<Redis>> = OnceCell::new();
+pub const BUILD_CHANNEL: &'static str = "build_work";
 const EXPIRE_TIME: i32 = 60 * 12;
 
 impl Redis {
-    fn get_instance() -> Option<Arc<Mutex<Redis>>> {
-        unsafe {
-            if RM.is_none() {
-                None
-            } else {
-                RM.clone()
-            }
+    fn get_instance() -> Option<Arc<Redis>> {
+        let result = RM.get();
+        match result {
+            Some(r) => Some(r.clone()),
+            None => None,
         }
     }
 
@@ -34,7 +29,7 @@ impl Redis {
 
         match result {
             Some(res) => {
-                let mut con = res.lock().unwrap().con.clone();
+                let mut con = res.con.clone();
 
                 let result: RedisResult<()> = redis::cmd("PUBLISH")
                     .arg(channel)
@@ -62,8 +57,8 @@ impl Redis {
 
         match result {
             Some(res) => {
-                let value = res.lock().unwrap().value.clone();
-                let mut con = res.lock().unwrap().con.clone();
+                let value = res.value.clone();
+                let mut con = res.con.clone();
 
                 let result: RedisResult<i8> = redis::cmd("setnx")
                     .arg(key)
@@ -102,8 +97,8 @@ impl Redis {
 
         match result {
             Some(res) => {
-                let value = res.lock().unwrap().value.clone();
-                let mut con = res.lock().unwrap().con.clone();
+                let value = res.value.clone();
+                let mut con = res.con.clone();
 
                 let result: RedisResult<String> = redis::cmd("get")
                     .arg(key)
@@ -142,13 +137,9 @@ pub async fn init_redis(url: String, pub_sub: bool) {
         Ok(con) => {
             info!("init redis success ...");
 
-            unsafe {
-                RM.get_or_insert_with(|| {
-                    // 初始化单例对象的代码
-                    let value = uuid::Uuid::new_v4().to_string();
-                    Arc::new(Mutex::new(Redis { con, value }))
-                });
-            }
+            let value = uuid::Uuid::new_v4().to_string();
+
+            let _ = RM.set(Arc::new(Redis { con, value }));
 
             if !pub_sub {
                 info!("close build work listener ....");
@@ -156,40 +147,38 @@ pub async fn init_redis(url: String, pub_sub: bool) {
             }
 
             // 开启订阅
-            thread::spawn(move || {
+            crate::config::get_runtime().spawn(async move {
                 info!("start listern redis channel to listener build work ....");
-                let mut rt = tokio::runtime::Runtime::new().unwrap();
-                rt.block_on(async move {
-                    loop {
-                        let pubsub = client.get_async_connection().await;
 
-                        if let Ok(con) = pubsub {
-                            let mut pubsub_conn = con.into_pubsub();
-                            let _ = pubsub_conn.subscribe(BUILD_CHANNEL).await;
-                            let mut pubsub_stream = pubsub_conn.into_on_message();
+                loop {
+                    let pubsub = client.get_async_connection().await;
 
-                            let data: Option<Msg> = pubsub_stream.next().await;
+                    if let Ok(con) = pubsub {
+                        let mut pubsub_conn = con.into_pubsub();
+                        let _ = pubsub_conn.subscribe(BUILD_CHANNEL).await;
+                        let mut pubsub_stream = pubsub_conn.into_on_message();
 
-                            if let Some(msg) = data {
-                                if msg.get_channel_name() == BUILD_CHANNEL {
-                                    let result: RedisResult<String> = msg.get_payload();
+                        let data: Option<Msg> = pubsub_stream.next().await;
 
-                                    if let Ok(id) = result {
-                                        info!(
-                                            "found channel = {}, id = {}",
-                                            msg.get_channel_name(),
-                                            id
-                                        );
+                        if let Some(msg) = data {
+                            if msg.get_channel_name() == BUILD_CHANNEL {
+                                let result: RedisResult<String> = msg.get_payload();
 
-                                        crate::work::start_build_by_id(id).await;
-                                    }
+                                if let Ok(id) = result {
+                                    info!(
+                                        "found channel = {}, id = {}",
+                                        msg.get_channel_name(),
+                                        id
+                                    );
+
+                                    crate::work::start_build_by_id(id).await;
                                 }
                             }
-                        } else {
-                            tokio::time::delay_for(Duration::from_millis(1000)).await;
                         }
+                    } else {
+                        tokio::time::delay_for(Duration::from_millis(1000)).await;
                     }
-                });
+                }
             });
         }
         Err(err) => {
@@ -208,59 +197,64 @@ pub async fn init_redis(url: String, pub_sub: bool) {
 
 #[cfg(test)]
 mod tests {
-    use std::{thread, time::Duration};
+    use std::{sync::Arc, time::Duration};
 
     use actix_rt::time::interval;
     use log::info;
     use redis::{Client, RedisResult};
     use tokio::stream::StreamExt;
 
+    use crate::config;
+
     use super::Redis;
 
     async fn lll(client: Client) -> RedisResult<()> {
-        thread::spawn(move || {
-            let mut rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async move {
-                loop {
-                    let pubsub = client.get_async_connection().await;
+        config::get_runtime().spawn(async move {
+            loop {
+                let pubsub = client.get_async_connection().await;
 
-                    if let Ok(pubsub_conn2) = pubsub {
-                        let mut pubsub_conn = pubsub_conn2.into_pubsub();
-                        let _ = pubsub_conn.subscribe("wavephone").await;
-                        let mut pubsub_stream = pubsub_conn.into_on_message();
+                info!("pubsub thread = {}", thread_id::get());
 
-                        let msg = pubsub_stream.next().await;
-                        info!("receive msg = {:?}", msg);
-                    }
+                if let Ok(pubsub_conn2) = pubsub {
+                    let mut pubsub_conn = pubsub_conn2.into_pubsub();
+                    let _ = pubsub_conn.subscribe("wavephone").await;
+                    let mut pubsub_stream = pubsub_conn.into_on_message();
+
+                    let msg = pubsub_stream.next().await;
+                    info!("receive msg = {:?}", msg);
                 }
-            });
+                tokio::time::delay_for(Duration::from_millis(1000)).await;
+            }
         });
 
-        thread::spawn(move || {
-            let mut rt = tokio::runtime::Runtime::new().unwrap();
-            rt.block_on(async move {
-                info!("start publish");
+        config::get_runtime().spawn(async move {
+            info!("start publish");
 
-                loop {
-                    let result = Redis::get_instance();
+            loop {
+                let result = Redis::get_instance();
 
-                    match result {
-                        Some(res) => {
-                            let mut con = res.lock().unwrap().con.clone();
+                match result {
+                    Some(res) => {
+                        let mut con = res.con.clone();
 
-                            let result: RedisResult<()> = redis::cmd("PUBLISH")
-                                .arg(&["wavephone", "bar"])
-                                .query_async(&mut con)
-                                .await;
+                        info!(
+                            "pub thread = {} {} ",
+                            thread_id::get(),
+                            Arc::strong_count(&res)
+                        );
 
-                            info!("result = {:?}", result);
-                        }
-                        None => {}
+                        let result: RedisResult<()> = redis::cmd("PUBLISH")
+                            .arg(&["wavephone", "bar"])
+                            .query_async(&mut con)
+                            .await;
+
+                        info!("result = {:?}", result);
                     }
-
-                    tokio::time::delay_for(Duration::from_millis(1000)).await;
+                    None => {}
                 }
-            });
+
+                tokio::time::delay_for(Duration::from_millis(2000)).await;
+            }
         });
 
         Ok(())
@@ -289,8 +283,8 @@ mod tests {
         crate::config::Config::get_instance();
         super::init_redis("redis://192.168.2.36:6379".to_string(), false).await;
 
-        // let r = redis::Client::open("redis://192.168.2.36:6379").unwrap();
-        // super::lll(r).await.is_ok();
+        let r = redis::Client::open("redis://192.168.2.36:6379").unwrap();
+        let _ = lll(r).await.is_ok();
 
         let mut interval = interval(Duration::from_millis(1000000));
         loop {
