@@ -157,11 +157,46 @@ pub async fn init_db(url: &str) {
 
 #[cfg(test)]
 mod tests {
+    use std::sync::{Arc, Mutex};
+
     use super::*;
     use bson::doc;
     use log::info;
 
     use crate::build_params::AppParams;
+
+    #[actix_rt::test]
+    async fn test_remove_fid() {
+        crate::config::Config::get_instance();
+
+        super::init_db("mongodb://192.168.2.36:27017").await;
+
+        let filter = doc! {"code": 0, "fid": {"$gt":""}};
+
+        let find_options = FindOptions::builder()
+            .sort(doc! { "date": -1 })
+            .limit(Some(20))
+            .build();
+
+        let vec: Arc<Mutex<Vec<AppParams>>> = Arc::new(Mutex::new(Vec::new()));
+
+        let result = Db::find(COLLECTION_BUILD, filter, find_options, &|app| {
+            vec.lock().unwrap().push(app)
+        })
+        .await;
+
+        if result.is_err() {
+            info!("find error : {:?}", result.err());
+        } else {
+            for app in vec.lock().unwrap().iter() {
+                let fid = app.fid.clone().unwrap();
+                info!("delete  fid = {} ", fid.clone());
+                crate::weed::delete(&fid).await;
+            }
+        }
+
+        assert!(true);
+    }
 
     #[actix_rt::test]
     async fn test_mongdb_find() {
