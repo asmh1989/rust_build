@@ -176,103 +176,103 @@ pub async fn start(app: &mut AppParams) -> Result<(), String> {
 }
 
 pub async fn start_build_by_id(id: String) {
-    let doc = filter_build_id!(id);
-
-    let result = Db::find_one(COLLECTION_BUILD, doc, None).await;
-
-    match result {
-        Ok(doc) => {
-            if let Some(doc) = doc {
-                let result = bson::from_bson::<AppParams>(Bson::Document(doc));
-                match result {
-                    Ok(app) => {
-                        start_build(app).await;
-                    }
-                    Err(err) => {
-                        info!("{}", err);
-                    }
-                }
-            } else {
-                info!("start_build_by_id db not find");
-            }
-        }
-        Err(err) => {
-            info!("start_build_by_id err = {}", err);
-        }
-    }
-}
-
-pub async fn start_build(mut app: AppParams) {
     if !Config::is_building() {
-        if !Redis::lock(&app.build_id.to_string()).await {
+        if !Redis::lock(&id).await {
             return;
         }
-        Config::change_building(true);
+        let doc = filter_build_id!(id);
 
-        info!("start build {} ... ", app.build_id);
-        let time = chrono::Utc::now().timestamp();
-        app.status = build_params::BuildStatus::building();
-        app.operate = Some(Config::ip());
-        if let Err(e) = app.save_db().await {
-            info!("{}", e);
-        }
-        match start(&mut app).await {
-            Ok(_) => {
-                info!("{}  build finish ....", app.build_id);
+        let result = Db::find_one(COLLECTION_BUILD, doc, None).await;
 
-                app.build_time = (chrono::Utc::now().timestamp() - time) as i16;
-
-                app.status = build_params::BuildStatus::success();
-                if let Err(e) = app.save_db().await {
-                    info!("{}", e);
-                }
-            }
-            Err(e) => {
-                warn!(
-                    "{} error \n------------------------\n{}\n------------------------",
-                    app.build_id, e
-                );
-
-                app.build_time = (chrono::Utc::now().timestamp() - time) as i16;
-
-                app.status = build_params::BuildStatus::failed(e);
-
-                let log = get_log_file(app.build_id);
-
-                if file_exist(&log) {
-                    match crate::weed::upload(&log, format!("{}.txt", app.build_id)).await {
-                        Ok(fid) => {
-                            app.status.msg = format!(
-                                "{}\n 详细日志地址: {}",
-                                app.status.msg,
-                                get_upload_url!(fid)
-                            );
+        match result {
+            Ok(doc) => {
+                if let Some(doc) = doc {
+                    let result = bson::from_bson::<AppParams>(Bson::Document(doc));
+                    match result {
+                        Ok(app) => {
+                            start_build(app).await;
                         }
                         Err(err) => {
-                            info!("error upload log file : {}", err);
+                            info!("{}", err);
                         }
                     }
-                }
-
-                if let Err(err) = app.save_db().await {
-                    info!("{}", err);
+                } else {
+                    info!("start_build_by_id db not find");
                 }
             }
-        }
-
-        match crate::mail::send_email(&app).await {
-            Ok(_) => {}
             Err(err) => {
-                info!("send mail err = {}", err)
+                info!("start_build_by_id err = {}", err);
             }
         }
-
-        Redis::unlock(&app.build_id.to_string()).await;
-
-        Config::change_building(false);
     } else {
         info!("waiting ....")
     }
+}
+
+async fn start_build(mut app: AppParams) {
+    Config::change_building(true);
+
+    info!("start build {} ... ", app.build_id);
+    let time = chrono::Utc::now().timestamp();
+    app.status = build_params::BuildStatus::building();
+    app.operate = Some(Config::ip());
+    if let Err(e) = app.save_db().await {
+        info!("{}", e);
+    }
+    match start(&mut app).await {
+        Ok(_) => {
+            info!("{}  build finish ....", app.build_id);
+
+            app.build_time = (chrono::Utc::now().timestamp() - time) as i16;
+
+            app.status = build_params::BuildStatus::success();
+            if let Err(e) = app.save_db().await {
+                info!("{}", e);
+            }
+        }
+        Err(e) => {
+            warn!(
+                "{} error \n------------------------\n{}\n------------------------",
+                app.build_id, e
+            );
+
+            app.build_time = (chrono::Utc::now().timestamp() - time) as i16;
+
+            app.status = build_params::BuildStatus::failed(e);
+
+            let log = get_log_file(app.build_id);
+
+            if file_exist(&log) {
+                match crate::weed::upload(&log, format!("{}.txt", app.build_id)).await {
+                    Ok(fid) => {
+                        app.status.msg = format!(
+                            "{}\n 详细日志地址: {}",
+                            app.status.msg,
+                            get_upload_url!(fid)
+                        );
+                    }
+                    Err(err) => {
+                        info!("error upload log file : {}", err);
+                    }
+                }
+            }
+
+            if let Err(err) = app.save_db().await {
+                info!("{}", err);
+            }
+        }
+    }
+
+    match crate::mail::send_email(&app).await {
+        Ok(_) => {}
+        Err(err) => {
+            info!("send mail err = {}", err)
+        }
+    }
+
+    Redis::unlock(&app.build_id.to_string()).await;
+
+    Config::change_building(false);
 }
 
 #[cfg(test)]
