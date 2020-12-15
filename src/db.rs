@@ -191,7 +191,7 @@ mod tests {
             for app in vec.lock().unwrap().iter() {
                 let fid = app.fid.clone().unwrap();
                 info!("delete  fid = {} ", fid.clone());
-                crate::weed::delete(&fid).await;
+                let _ = crate::weed::delete(&fid).await;
             }
         }
 
