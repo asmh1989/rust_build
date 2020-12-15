@@ -154,7 +154,10 @@ pub fn change_xml<'a>(
             Ok(Event::Start(ref e)) if e.name() == b"application" => {
                 let mut elem = BytesStart::owned(b"application".to_vec(), "application".len());
 
-                elem.extend_attributes(e.attributes().map(|attr| attr.unwrap()));
+                elem.extend_attributes(e.attributes().map(|attr| attr.unwrap()).filter(|s| {
+                    let key = from_utf8(s.key).unwrap();
+                    "android:label" != key && app_name.is_some()
+                }));
 
                 if let Some(ref code) = app_name {
                     elem.push_attribute(("android:label", code.as_str()));
