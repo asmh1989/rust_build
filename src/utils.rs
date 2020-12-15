@@ -116,6 +116,7 @@ pub fn change_xml<'a>(
     meta: &HashMap<String, String>,
     version_code: Option<i32>,
     version_name: Option<String>,
+    app_name: Option<String>,
     path: Option<&'a str>,
 ) -> Result<(), Error> {
     let mut reader = Reader::from_str(xml);
@@ -151,7 +152,15 @@ pub fn change_xml<'a>(
                 writer.write_event(Event::End(BytesEnd::borrowed(b"manifest")))?;
             }
             Ok(Event::Start(ref e)) if e.name() == b"application" => {
-                writer.write_event(Event::Start(e.clone()))?;
+                let mut elem = BytesStart::owned(b"application".to_vec(), "application".len());
+
+                elem.extend_attributes(e.attributes().map(|attr| attr.unwrap()));
+
+                if let Some(ref code) = app_name {
+                    elem.push_attribute(("android:label", code.as_str()));
+                }
+
+                writer.write_event(Event::Start(elem))?;
 
                 if !meta.is_empty() {
                     meta.iter().for_each(|s| {
@@ -284,6 +293,7 @@ mod tests {
             &meta,
             Some(1111),
             Some("1.0.0".to_string()),
+            Some("个人中心".to_string()),
             Some("/tmp/tt.xml")
         )
         .is_ok());

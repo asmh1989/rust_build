@@ -125,11 +125,17 @@ pub fn change_config(app: &AppParams) -> Result<(), String> {
 
         info!("change AndroidManifestXml...");
 
+        let app_name = match &app.params.configs.base_config {
+            Some(c) => c.app_name.clone(),
+            None => None,
+        };
+
         match utils::change_xml(
             &fs::read_to_string(Path::new(&android_manifest_xml.as_str())).unwrap(),
             &meta,
             app.params.version.version_code.clone(),
             app.params.version.version_name.clone(),
+            app_name,
             Some(android_manifest_xml.as_str()),
         ) {
             Ok(_) => {}
