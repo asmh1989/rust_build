@@ -250,6 +250,7 @@ async fn main() -> std::io::Result<()> {
             VERSION
         );
         HttpServer::new(|| App::new().wrap(Logger::new("%U %s %D")).service(hello))
+            .workers(1)
             .bind(format!("0.0.0.0:{}", opt.port))?
             .run()
             .await
