@@ -17,6 +17,7 @@ use crate::{
     build_params::AppParams,
     db::{Db, COLLECTION_BUILD},
     filter_build_id, get_default, get_upload_url,
+    http::QueryResponse,
 };
 
 async fn _email(mail: &str, title: &str, content: &str) -> Result<(), String> {
@@ -62,21 +63,28 @@ async fn _email(mail: &str, title: &str, content: &str) -> Result<(), String> {
     Ok(())
 }
 
-pub async fn send_email(app: &AppParams) -> Result<(), String> {
+async fn send_response(app: &AppParams) {
     let url = app.params.response_url.clone();
 
     if url.is_some() {
         let client = reqwest::Client::new();
-        let result = client.post(url.unwrap()).send().await;
+        let mut res = QueryResponse::new();
+        res.to_response(app);
+        info!("reponse url = {}", url.clone().unwrap());
+        let result = client.post(url.unwrap()).json(&res).send().await;
         match result {
-            Ok(_) => {
-                info!("response url success!")
+            Ok(res) => {
+                info!("response url success! {} ", res.text().await.unwrap())
             }
             Err(err) => {
                 info!("response url failed! {}", err)
             }
         }
     }
+}
+
+pub async fn send_email(app: &AppParams) -> Result<(), String> {
+    send_response(app).await;
 
     let email = app.params.email.clone();
 
@@ -181,7 +189,43 @@ pub async fn send_email_by_id(id: &str) -> Result<(), String> {
 
 #[cfg(test)]
 mod tests {
-    use crate::db::init_db;
+    use bson::Bson;
+    use log::info;
+
+    use crate::{
+        build_params::AppParams,
+        db::{init_db, Db, COLLECTION_BUILD},
+        filter_build_id,
+    };
+
+    use super::send_response;
+
+    async fn send_response_by_id(id: &str) -> Result<(), String> {
+        if Db::contians(COLLECTION_BUILD, filter_build_id!(id)).await {
+            let result = Db::find_one(COLLECTION_BUILD, filter_build_id!(id), None)
+                .await
+                .unwrap();
+
+            match result {
+                Some(doc) => {
+                    let result = bson::from_bson::<AppParams>(Bson::Document(doc));
+                    match result {
+                        Ok(app) => {
+                            send_response(&app).await;
+                            Ok(())
+                        }
+                        Err(err) => {
+                            info!("{}", err);
+                            Err(format!("{:?}", err))
+                        }
+                    }
+                }
+                None => Err(format!("not found this document !!!")),
+            }
+        } else {
+            Err(format!("not found this build id!!!"))
+        }
+    }
 
     #[actix_rt::test]
     async fn test_send_email1() {
@@ -192,6 +236,16 @@ mod tests {
                 .await
                 .is_ok()
         );
+    }
+
+    #[actix_rt::test]
+    async fn test_send_response() {
+        crate::config::Config::get_instance();
+
+        init_db("mongodb://192.168.2.36:27017").await;
+
+        let result = send_response_by_id("effc2750-e1c8-11ea-bde6-7fab7a770bf7").await;
+        assert!(result.is_ok());
     }
 
     #[actix_rt::test]

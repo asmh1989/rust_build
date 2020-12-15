@@ -9,7 +9,7 @@ use std::{
 
 use crate::redis::{Redis, BUILD_CHANNEL};
 use actix_web::{
-    error::InternalError, error::JsonPayloadError, get, middleware::Logger, web, App, Error,
+    error::InternalError, error::JsonPayloadError, middleware::Logger, post, web, App, Error,
     HttpRequest, HttpServer, Responder,
 };
 use args::Opt;
@@ -39,8 +39,9 @@ mod utils;
 mod weed;
 mod work;
 
-#[get("/")]
-async fn hello() -> impl Responder {
+#[post("/test/post")]
+async fn hello(req_body: String) -> impl Responder {
+    info!("test response data = {}", req_body);
     response_ok(Value::String("hello world".to_string()))
 }
 
@@ -230,6 +231,10 @@ async fn main() -> std::io::Result<()> {
                         .route(web::post().to(http::MyRoute::build)),
                 )
                 .route("/app/query/{id}", web::get().to(http::MyRoute::query))
+                .route(
+                    "/app/package/{id}.apk",
+                    web::get().to(http::MyRoute::package),
+                )
         })
         .bind(format!("0.0.0.0:{}", opt.port))?
         .run()
@@ -244,9 +249,9 @@ async fn main() -> std::io::Result<()> {
 "#,
             VERSION
         );
-        let mut interval = interval(Duration::from_millis(80000));
-        loop {
-            interval.tick().await;
-        }
+        HttpServer::new(|| App::new().wrap(Logger::new("%U %s %D")).service(hello))
+            .bind(format!("0.0.0.0:{}", opt.port))?
+            .run()
+            .await
     }
 }

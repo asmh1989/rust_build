@@ -7,7 +7,6 @@ use tokio::runtime::Runtime;
 #[derive(Clone, Debug)]
 pub struct Config {
     pub android_home: String,
-    pub java_home: String,
     pub cache_home: String,
     pub building: bool,
     pub ip: String,
@@ -37,7 +36,6 @@ impl Config {
                     // 初始化单例对象的代码
                     Arc::new(Mutex::new(Config {
                         android_home: "/opt/android/sdk".to_string(),
-                        java_home: "".to_string(),
                         cache_home: format!("{}/.mdm_build", env::var("HOME").unwrap()).to_string(),
                         building: false,
                         ip: whoami::hostname(),
@@ -53,10 +51,6 @@ impl Config {
 
     pub fn set_ip(&mut self, ip: &str) {
         self.ip = ip.to_string();
-    }
-
-    pub fn set_java_home(&mut self, java: &str) {
-        self.java_home = java.to_string();
     }
 
     pub fn set_android_home(&mut self, android: &str) {

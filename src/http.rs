@@ -15,7 +15,7 @@ use crate::{
 };
 
 #[derive(Debug, Serialize, Deserialize)]
-struct QueryResponse {
+pub struct QueryResponse {
     pub status: i32,
     pub msg: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -23,6 +23,29 @@ struct QueryResponse {
     #[serde(skip_serializing_if = "Option::is_none", rename = "downloadPath")]
     pub download_path: Option<String>,
 }
+
+impl QueryResponse {
+    pub fn new() -> Self {
+        QueryResponse {
+            status: CODE_ILLEGAL,
+            msg: MSG_ILLEGAL.to_string(),
+            detail: None,
+            download_path: None,
+        }
+    }
+
+    pub fn to_response(&mut self, app: &AppParams) {
+        self.status = app.status.code;
+        self.msg = if app.status.is_success() {
+            self.download_path = Some(format!("/app/package/{}.apk", app.build_id.clone()));
+            "打包成功".to_string()
+        } else {
+            self.detail = Some(app.status.msg.clone());
+            "打包失败".to_string()
+        };
+    }
+}
+
 pub struct MyRoute;
 impl MyRoute {
     pub async fn build(params: web::Json<BuildParams>) -> impl Responder {
@@ -43,14 +66,9 @@ impl MyRoute {
     pub async fn query(web::Path(id): web::Path<String>) -> impl Responder {
         info!("query id {} ... ", id);
 
-        let mut res = QueryResponse {
-            status: CODE_ILLEGAL,
-            msg: MSG_ILLEGAL.to_string(),
-            detail: None,
-            download_path: None,
-        };
+        let mut res = QueryResponse::new();
 
-        let doc = filter_build_id!(id);
+        let doc = filter_build_id!(id.clone());
 
         if Db::contians(COLLECTION_BUILD, doc.clone()).await {
             let result = Db::find_one(COLLECTION_BUILD, doc, None).await.unwrap();
@@ -60,17 +78,7 @@ impl MyRoute {
                     let result = bson::from_bson::<AppParams>(Bson::Document(doc));
                     match result {
                         Ok(app) => {
-                            res.status = app.status.code;
-                            res.msg = if app.status.is_success() {
-                                let mut fid = app.fid.clone();
-                                res.download_path = Some(
-                                    get_upload_url!(fid.get_or_insert("".to_string())).to_string(),
-                                );
-                                "打包成功".to_string()
-                            } else {
-                                res.detail = Some(app.status.msg.clone());
-                                "打包失败".to_string()
-                            };
+                            res.to_response(&app);
                         }
                         Err(err) => {
                             info!("{}", err);
@@ -87,5 +95,36 @@ impl MyRoute {
         HttpResponse::Ok()
             .content_type("application/json")
             .body(serde_json::to_string(&res).unwrap())
+    }
+
+    pub async fn package(web::Path(id): web::Path<String>) -> impl Responder {
+        info!("package id {} ... ", id);
+
+        let doc = filter_build_id!(id.clone());
+
+        let result = Db::find_one(COLLECTION_BUILD, doc, None).await;
+        match result {
+            Ok(oo) => match oo {
+                Some(doc) => {
+                    let result = bson::from_bson::<AppParams>(Bson::Document(doc));
+                    match result {
+                        Ok(app) => {
+                            return HttpResponse::PermanentRedirect()
+                                .header("Location", get_upload_url!(&app.fid.unwrap()))
+                                .finish()
+                        }
+                        Err(_) => {}
+                    }
+                }
+                None => {}
+            },
+            Err(err) => {
+                info!("{}", err);
+            }
+        }
+
+        HttpResponse::Ok()
+            .content_type("application/json")
+            .body(serde_json::to_string(&QueryResponse::new()).unwrap())
     }
 }
