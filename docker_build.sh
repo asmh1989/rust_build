@@ -27,4 +27,5 @@ echo "build docker end..."
 sudo docker push 192.168.2.36:5000/rust_build:latest
 
 git checkout -- Cargo.toml
+git checkout -- Cargo.lock
 
