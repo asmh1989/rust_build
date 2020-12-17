@@ -296,28 +296,26 @@ mod tests {
         let data = r#"
         {
             "version" : {
+                "project_name" : "seed",
+                "module_name" : "seed",
                 "scm" : "git",
-                "source_url" : "https://github.com/asmh1989/build_demo.git",
-                "version_code" : 20112601,
-                "version_name" : "45.1.1.201126.1"
+                "source_url" : "ssh://git@gitlab.justsafe.com:8442/ht5.0/mdm.git",
+                "channel" : "master",
+                "branch" : "device_provisioned",
+                "version_code" : 20121701,
+                "version_name" : "5.0.20201217r1.v"
             },
             "configs" : {
-                "framework" : "normal_4.5",
-                "base_config" : {
-                    "app_name" : "自助助手",
-                    "meta" : {
-                        "brank" : "common",
-                        "model" : "common"
-                    },
-                    "assets_config" : "http://192.168.2.34:8086/jpm/nas/MDM45-buildConfig/e0d79b5647b241a98c90c19509d9eb63-G贵州公安-45.1.1.201126.1/config.zip"
-                },
+                "framework" : "normal",
+                "base_config" : {},
                 "app_config" : {
-                    "is_check_root" : "false",
-                    "is_check_support_sim_card" : "true",
+                    "is_check_root" : "true",
                     "is_overseas" : "false",
-                    "is_black_sim" : "false"
+                    "is_black_sim" : "false",
+                    "is_check_support_sim_card" : "true"
                 }
-            }
+            },
+            "email" : "sunmh@justsafe.com"
         }"#;
 
         let p: BuildParams = serde_json::from_str(data)?;

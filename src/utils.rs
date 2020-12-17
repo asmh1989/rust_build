@@ -152,18 +152,19 @@ pub fn change_xml<'a>(
                 writer.write_event(Event::End(BytesEnd::borrowed(b"manifest")))?;
             }
             Ok(Event::Start(ref e)) if e.name() == b"application" => {
-                let mut elem = BytesStart::owned(b"application".to_vec(), "application".len());
-
-                elem.extend_attributes(e.attributes().map(|attr| attr.unwrap()).filter(|s| {
-                    let key = from_utf8(s.key).unwrap();
-                    "android:label" != key && app_name.is_some()
-                }));
 
                 if let Some(ref code) = app_name {
-                    elem.push_attribute(("android:label", code.as_str()));
-                }
+                    let mut elem = BytesStart::owned(b"application".to_vec(), "application".len());
 
-                writer.write_event(Event::Start(elem))?;
+                    elem.extend_attributes(e.attributes().map(|attr| attr.unwrap()).filter(|s| {
+                        let key = from_utf8(s.key).unwrap();
+                        "android:label" != key && app_name.is_some()
+                    }));
+                    elem.push_attribute(("android:label", code.as_str()));
+                    writer.write_event(Event::Start(elem))?;
+                } else {
+                    writer.write_event(Event::Start(e.clone()))?;
+                }
 
                 if !meta.is_empty() {
                     meta.iter().for_each(|s| {
