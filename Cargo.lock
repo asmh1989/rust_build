@@ -2579,7 +2579,7 @@ dependencies = [
 
 [[package]]
 name = "rust_build"
-version = "0.2.1-2020-12-17-79c0000"
+version = "0.2.1"
 dependencies = [
  "actix-rt",
  "actix-web",

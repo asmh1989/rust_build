@@ -163,12 +163,14 @@ async fn main() -> std::io::Result<()> {
 
     if opt.ip.is_empty() {
         opt.ip = whoami::hostname();
-    } else {
-        config::Config::get_instance()
-            .lock()
-            .unwrap()
-            .set_ip(&opt.ip);
-    }
+    } 
+
+    opt.ip = format!("{}-{}", opt.ip, VERSION);
+
+    config::Config::get_instance()
+    .lock()
+    .unwrap()
+    .set_ip(&opt.ip);
 
     if !opt.cache_path.is_empty() {
         config::Config::get_instance()
