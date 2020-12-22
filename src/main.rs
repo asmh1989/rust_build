@@ -72,7 +72,7 @@ fn clear_cache() -> io::Result<()> {
         );
 
         let duration = time.signed_duration_since(Utc::now());
-        if duration.num_days().abs() > 2 {
+        if duration.num_days().abs() > 21 {
             info!(
                 " file = {:?} duration = {}  delete !",
                 path.clone(),
@@ -163,14 +163,14 @@ async fn main() -> std::io::Result<()> {
 
     if opt.ip.is_empty() {
         opt.ip = whoami::hostname();
-    } 
+    }
 
     opt.ip = format!("{}-{}", opt.ip, VERSION);
 
     config::Config::get_instance()
-    .lock()
-    .unwrap()
-    .set_ip(&opt.ip);
+        .lock()
+        .unwrap()
+        .set_ip(&opt.ip);
 
     if !opt.cache_path.is_empty() {
         config::Config::get_instance()
