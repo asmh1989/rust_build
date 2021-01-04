@@ -30,6 +30,7 @@ mod args;
 mod build_params;
 mod config;
 mod db;
+mod ding;
 mod framework;
 mod http;
 mod http_response;

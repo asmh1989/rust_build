@@ -95,12 +95,21 @@ pub async fn send_email(app: &AppParams) -> Result<(), String> {
         )
         .unwrap();
         if email_regex.is_match(&email) {
+            let _ = crate::ding::post_ding(&app).await;
+
             let id = app.build_id;
             let converted = app.date.with_timezone(&Local).to_rfc3339();
 
+            let n = app
+                .params
+                .version
+                .project_name
+                .clone()
+                .unwrap_or(id.to_string());
+
             let (title, content) = if app.status.is_success() {
                 (
-                    format!("打包通知: 恭喜 {} 打包成功了!!", id),
+                    format!("打包通知: 恭喜 {} 打包成功了!!", n),
                     format!(
                         r#"
 <h3> 打包结果如下:  </h3>
@@ -129,7 +138,7 @@ pub async fn send_email(app: &AppParams) -> Result<(), String> {
                 )
             } else {
                 (
-                    format!("打包通知: 抱歉  {} 打包失败了..", id),
+                    format!("打包通知: 抱歉  {} 打包失败了..", n),
                     format!(
                         r#"
 <p> 打包结果如下:  </p>
