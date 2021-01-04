@@ -4,6 +4,7 @@ use std::{
     fs::{metadata, read_dir, remove_dir_all, remove_file},
     io,
     sync::{Arc, Mutex},
+    thread::{self},
     time::{Duration, UNIX_EPOCH},
 };
 
@@ -92,6 +93,7 @@ fn clear_cache() -> io::Result<()> {
 
 async fn time_work(manager: bool) {
     tokio::time::delay_for(Duration::from_millis(1000)).await;
+    info!("time_work start ...");
 
     let mut interval = interval(Duration::from_millis(8000));
     loop {
@@ -206,8 +208,11 @@ async fn main() -> std::io::Result<()> {
 
     let is_manager = opt.manager;
 
-    actix_rt::spawn(async move {
-        time_work(is_manager).await;
+    thread::spawn(move || {
+        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async move {
+            time_work(is_manager).await;
+        })
     });
 
     tokio::time::delay_for(Duration::from_millis(100)).await;
