@@ -68,7 +68,7 @@ pub async fn post_ding(app: &AppParams) -> Result<(), String> {
 {}
 ```
 
----n
+---
 >  `PowerBy {}`
                 "#,
                 n,
