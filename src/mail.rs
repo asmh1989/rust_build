@@ -86,6 +86,10 @@ async fn send_response(app: &AppParams) {
 pub async fn send_email(app: &AppParams) -> Result<(), String> {
     send_response(app).await;
 
+    if crate::config::Config::enable_ding() {
+        let _ = crate::ding::post_ding(&app).await;
+    }
+
     let email = app.params.email.clone();
 
     if email.is_some() {
@@ -95,8 +99,6 @@ pub async fn send_email(app: &AppParams) -> Result<(), String> {
         )
         .unwrap();
         if email_regex.is_match(&email) {
-            let _ = crate::ding::post_ding(&app).await;
-
             let id = app.build_id;
             let converted = app.date.with_timezone(&Local).to_rfc3339();
 

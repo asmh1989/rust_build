@@ -93,7 +93,7 @@ fn clear_cache() -> io::Result<()> {
 }
 
 async fn time_work(manager: bool) {
-    tokio::time::delay_for(Duration::from_millis(1000)).await;
+    tokio::time::sleep(Duration::from_millis(1000)).await;
     info!("time_work start ...");
 
     let mut interval = interval(Duration::from_millis(8000));
@@ -175,6 +175,11 @@ async fn main() -> std::io::Result<()> {
         .unwrap()
         .set_ip(&opt.ip);
 
+    config::Config::get_instance()
+        .lock()
+        .unwrap()
+        .set_ding(opt.ding);
+
     if !opt.cache_path.is_empty() {
         config::Config::get_instance()
             .lock()
@@ -199,24 +204,31 @@ async fn main() -> std::io::Result<()> {
 
     info!("start ...");
 
-    db::init_db(&format!("mongodb://{}", opt.sql)).await;
-
-    redis::init_redis(
-        format!("redis://{}", opt.redis),
-        !opt.manager || opt.manager_build,
-    )
-    .await;
+    let redis = opt.redis.clone();
 
     let is_manager = opt.manager;
 
+    let is_manager_build = opt.manager_build;
+
+    let sql = opt.sql;
+
+    config::get_runtime().spawn(async move {
+        db::init_db(&format!("mongodb://{}", sql)).await;
+
+        redis::init_redis(
+            format!("redis://{}", redis),
+            !is_manager || is_manager_build,
+        )
+        .await;
+        tokio::time::sleep(Duration::from_millis(100)).await;
+    });
+
     thread::spawn(move || {
-        let mut rt = tokio::runtime::Runtime::new().unwrap();
+        let rt = tokio::runtime::Runtime::new().unwrap();
         rt.block_on(async move {
             time_work(is_manager).await;
         })
     });
-
-    tokio::time::delay_for(Duration::from_millis(100)).await;
 
     if opt.manager {
         info!(

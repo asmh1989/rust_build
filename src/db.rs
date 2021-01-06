@@ -8,7 +8,7 @@ use mongodb::{
     Client,
 };
 use once_cell::sync::OnceCell;
-use tokio::stream::StreamExt;
+use tokio_stream::StreamExt;
 
 use std::result::Result;
 

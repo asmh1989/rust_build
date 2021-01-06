@@ -3,7 +3,7 @@ use std::{sync::Arc, thread, time::Duration};
 use log::{info, warn};
 use once_cell::sync::OnceCell;
 use redis::{aio::ConnectionManager, Msg, RedisResult};
-use tokio::stream::StreamExt;
+use tokio_stream::StreamExt;
 
 #[derive(Clone)]
 pub struct Redis {
@@ -176,7 +176,7 @@ pub async fn init_redis(url: String, pub_sub: bool) {
                             }
                         }
                     } else {
-                        tokio::time::delay_for(Duration::from_millis(1000)).await;
+                        tokio::time::sleep(Duration::from_millis(1000)).await;
                     }
                 }
             });
@@ -184,9 +184,9 @@ pub async fn init_redis(url: String, pub_sub: bool) {
         Err(err) => {
             warn!("init redis error ...{}", err);
             thread::spawn(move || {
-                let mut rt = tokio::runtime::Runtime::new().unwrap();
+                let rt = tokio::runtime::Runtime::new().unwrap();
                 rt.block_on(async move {
-                    tokio::time::delay_for(Duration::from_millis(1000)).await;
+                    tokio::time::sleep(Duration::from_millis(1000)).await;
                     info!("restart init redis ...");
                     init_redis(url, false).await
                 });
@@ -202,7 +202,7 @@ mod tests {
     use actix_rt::time::interval;
     use log::info;
     use redis::{Client, RedisResult};
-    use tokio::stream::StreamExt;
+    use tokio_stream::StreamExt;
 
     use crate::config;
 
@@ -223,7 +223,7 @@ mod tests {
                     let msg = pubsub_stream.next().await;
                     info!("receive msg = {:?}", msg);
                 }
-                tokio::time::delay_for(Duration::from_millis(1000)).await;
+                tokio::time::sleep(Duration::from_millis(1000)).await;
             }
         });
 
@@ -253,14 +253,14 @@ mod tests {
                     None => {}
                 }
 
-                tokio::time::delay_for(Duration::from_millis(2000)).await;
+                tokio::time::sleep(Duration::from_millis(2000)).await;
             }
         });
 
         Ok(())
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_redis_lock() {
         crate::config::Config::get_instance();
         super::init_redis("redis://192.168.2.36:6379".to_string(), false).await;
@@ -271,14 +271,14 @@ mod tests {
         assert!(super::Redis::unlock(key).await);
 
         assert!(super::Redis::lock_with_time(key, 10).await);
-        tokio::time::delay_for(Duration::from_millis(1000)).await;
+        tokio::time::sleep(Duration::from_millis(1000)).await;
         assert!(!super::Redis::lock(key).await);
-        tokio::time::delay_for(Duration::from_millis(10000)).await;
+        tokio::time::sleep(Duration::from_millis(10000)).await;
         assert!(super::Redis::lock(key).await);
         assert!(super::Redis::unlock(key).await);
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_redis() {
         crate::config::Config::get_instance();
         super::init_redis("redis://192.168.2.36:6379".to_string(), false).await;

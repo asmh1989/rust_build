@@ -9,6 +9,9 @@ pub struct Opt {
     #[structopt(long = "manager", help = "打包管理服务")]
     pub manager: bool,
 
+    #[structopt(long = "ding", help = "钉钉通知")]
+    pub ding: bool,
+
     #[structopt(long = "manager-build", help = "打包管理服务, 同时进行打包任务")]
     pub manager_build: bool,
 

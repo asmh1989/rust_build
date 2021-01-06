@@ -9,6 +9,7 @@ pub struct Config {
     pub android_home: String,
     pub cache_home: String,
     pub building: bool,
+    pub ding: bool,
     pub ip: String,
 }
 
@@ -38,6 +39,7 @@ impl Config {
                         android_home: "/opt/android/sdk".to_string(),
                         cache_home: format!("{}/.mdm_build", env::var("HOME").unwrap()).to_string(),
                         building: false,
+                        ding: false,
                         ip: whoami::hostname(),
                     }))
                 })
@@ -61,6 +63,10 @@ impl Config {
         self.building = building;
     }
 
+    pub fn set_ding(&mut self, ding: bool) {
+        self.ding = ding;
+    }
+
     pub fn cache_home() -> String {
         Config::get_instance().lock().unwrap().cache_home.clone()
     }
@@ -71,6 +77,10 @@ impl Config {
 
     pub fn is_building() -> bool {
         Config::get_instance().lock().unwrap().building
+    }
+
+    pub fn enable_ding() -> bool {
+        Config::get_instance().lock().unwrap().ding
     }
 
     pub fn ip() -> String {
