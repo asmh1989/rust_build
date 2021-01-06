@@ -220,7 +220,6 @@ async fn main() -> std::io::Result<()> {
             !is_manager || is_manager_build,
         )
         .await;
-        tokio::time::sleep(Duration::from_millis(100)).await;
     });
 
     thread::spawn(move || {

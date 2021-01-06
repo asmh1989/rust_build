@@ -1,6 +1,6 @@
 [package]
 name = "rust_build"
-version = "0.2.2"
+version = "0.3.0"
 authors = ["sun"]
 edition = "2018"
 

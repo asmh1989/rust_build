@@ -147,38 +147,42 @@ pub async fn init_redis(url: String, pub_sub: bool) {
             }
 
             // 开启订阅
-            crate::config::get_runtime().spawn(async move {
-                info!("start listern redis channel to listener build work ....");
+            thread::spawn(move || {
+                let rt = tokio::runtime::Runtime::new().unwrap();
 
-                loop {
-                    let pubsub = client.get_async_connection().await;
+                rt.block_on(async move {
+                    info!("start listern redis channel to listener build work ....");
 
-                    if let Ok(con) = pubsub {
-                        let mut pubsub_conn = con.into_pubsub();
-                        let _ = pubsub_conn.subscribe(BUILD_CHANNEL).await;
-                        let mut pubsub_stream = pubsub_conn.into_on_message();
+                    loop {
+                        let pubsub = client.get_async_connection().await;
 
-                        let data: Option<Msg> = pubsub_stream.next().await;
+                        if let Ok(con) = pubsub {
+                            let mut pubsub_conn = con.into_pubsub();
+                            let _ = pubsub_conn.subscribe(BUILD_CHANNEL).await;
+                            let mut pubsub_stream = pubsub_conn.into_on_message();
 
-                        if let Some(msg) = data {
-                            if msg.get_channel_name() == BUILD_CHANNEL {
-                                let result: RedisResult<String> = msg.get_payload();
+                            let data: Option<Msg> = pubsub_stream.next().await;
 
-                                if let Ok(id) = result {
-                                    info!(
-                                        "found channel = {}, id = {}",
-                                        msg.get_channel_name(),
-                                        id
-                                    );
+                            if let Some(msg) = data {
+                                if msg.get_channel_name() == BUILD_CHANNEL {
+                                    let result: RedisResult<String> = msg.get_payload();
 
-                                    crate::work::start_build_by_id(id).await;
+                                    if let Ok(id) = result {
+                                        info!(
+                                            "found channel = {}, id = {}",
+                                            msg.get_channel_name(),
+                                            id
+                                        );
+
+                                        crate::work::start_build_by_id(id).await;
+                                    }
                                 }
                             }
+                        } else {
+                            tokio::time::sleep(Duration::from_millis(1000)).await;
                         }
-                    } else {
-                        tokio::time::sleep(Duration::from_millis(1000)).await;
                     }
-                }
+                });
             });
         }
         Err(err) => {
