@@ -1,16 +1,14 @@
 use bson::Bson;
 use chrono::Local;
 use lettre::{
-    smtp::{
-        authentication::{Credentials, Mechanism},
-        extension::ClientId,
-        ConnectionReuseParameters,
+    message::{header, SinglePart},
+    transport::smtp::{
+        authentication::Credentials,
+        client::{Tls, TlsParameters},
     },
-    ClientSecurity, ClientTlsParameters, SmtpClient, Transport,
+    Message, SmtpTransport, Transport,
 };
-use lettre_email::EmailBuilder;
 use log::info;
-use native_tls::{Protocol, TlsConnector};
 use regex::Regex;
 
 use crate::{
@@ -22,43 +20,43 @@ use crate::{
 
 async fn _email(mail: &str, title: &str, content: &str) -> Result<(), String> {
     info!(" start send email to {}", mail);
-    let email = EmailBuilder::new()
-        .from("androidbuild@justsafe.com")
-        .to(mail)
+
+    let email = Message::builder()
+        .from("AndroidBuild<androidbuild@justsafe.com>".parse().unwrap())
+        .to(mail.parse().unwrap())
         .subject(title)
-        .html(content)
+        .singlepart(
+            SinglePart::builder()
+                .header(header::ContentType(
+                    "text/html; charset=utf8".parse().unwrap(),
+                ))
+                .body(String::from(content)),
+        )
+        .unwrap();
+
+    let creds = Credentials::new(
+        "androidbuild@justsafe.com".to_string(),
+        "Justsy123".to_string(),
+    );
+
+    let tls = TlsParameters::builder("mail.justsafe.com".to_string())
+        .dangerous_accept_invalid_certs(true)
+        .dangerous_accept_invalid_hostnames(true)
+        // .min_protocol_version(Some(Protocol::Sslv3))
         .build()
         .unwrap();
 
-    let mut tls_builder = TlsConnector::builder();
-    // Disable as many security features as possible ( no luck :( )
-    tls_builder.min_protocol_version(Some(Protocol::Sslv3));
-    tls_builder.use_sni(false);
-    tls_builder.danger_accept_invalid_certs(true);
-    tls_builder.danger_accept_invalid_hostnames(true);
-    let tls_parameters = ClientTlsParameters::new(
-        "mail.justsafe.com".to_string(),
-        tls_builder.build().unwrap(),
-    );
-
-    let mut mailer = SmtpClient::new(
-        ("mail.justsafe.com", 587),
-        ClientSecurity::Required(tls_parameters),
-    )
-    .unwrap()
-    .authentication_mechanism(Mechanism::Login) // Mechanism::Login does not work either
-    .hello_name(ClientId::Domain("mail.justsafe.com".to_string()))
-    .credentials(Credentials::new(
-        "androidbuild@justsafe.com".to_string(),
-        "Justsy123".to_string(),
-    ))
-    .connection_reuse(ConnectionReuseParameters::ReuseUnlimited)
-    .transport();
+    // Open a remote connection to gmail using STARTTLS
+    let mailer = SmtpTransport::builder_dangerous("mail.justsafe.com")
+        .port(587)
+        .tls(Tls::Required(tls))
+        .credentials(creds)
+        .build();
 
     // Send the email
-    match mailer.send(email.into()) {
-        Ok(_) => info!("Email sent successfully!"),
-        Err(e) => info!("Could not send email: {:?}", e),
+    match mailer.send(&email) {
+        Ok(_) => println!("Email sent successfully!"),
+        Err(e) => panic!("Could not send email: {:?}", e),
     }
     Ok(())
 }
@@ -259,7 +257,7 @@ mod tests {
         assert!(result.is_ok());
     }
 
-    #[actix_rt::test]
+    #[tokio::test]
     async fn test_send_email_failed() {
         crate::config::Config::get_instance();
 
