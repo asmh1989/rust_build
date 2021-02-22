@@ -52,7 +52,9 @@ tokio-stream = "0.1.2"
 
 once_cell = "1.5.2"
 
-lettre = { path = "../lettre", default-features = false, features = [
+native-tls = "0.2"
+
+lettre = { git = "https://github.com/asmh1989/lettre.git", rev = "291234c6", default-features = false, features = [
     "smtp-transport",
     "native-tls",
     "builder",

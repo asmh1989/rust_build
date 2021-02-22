@@ -9,6 +9,7 @@ use lettre::{
     Message, SmtpTransport, Transport,
 };
 use log::info;
+use native_tls::Protocol;
 use regex::Regex;
 
 use crate::{
@@ -42,7 +43,7 @@ async fn _email(mail: &str, title: &str, content: &str) -> Result<(), String> {
     let tls = TlsParameters::builder("mail.justsafe.com".to_string())
         .dangerous_accept_invalid_certs(true)
         .dangerous_accept_invalid_hostnames(true)
-        // .min_protocol_version(Some(Protocol::Sslv3))
+        .min_protocol_version(Protocol::Sslv3)
         .build()
         .unwrap();
 
