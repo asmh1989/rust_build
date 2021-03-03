@@ -6,8 +6,8 @@ use tokio_util::codec::{BytesCodec, FramedRead};
 
 use crate::result_err;
 
-const ASSIGN_URL: &'static str = "http://gitlab.justsafe.com:9333/dir/assign";
-const LOOKUP_URL: &'static str = "http://gitlab.justsafe.com:9333/dir/lookup?fileId=";
+const ASSIGN_URL: &'static str = "http://192.168.10.64:9333/dir/assign";
+const LOOKUP_URL: &'static str = "http://192.168.10.64:9333/dir/lookup?fileId=";
 const AUTH_KEY: &'static str = "Authorization";
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -19,7 +19,7 @@ struct Assign {
 #[macro_export]
 macro_rules! get_upload_url {
     ($e:expr) => {
-        format!("http://gitlab.justsafe.com:8080/{}", $e).as_str()
+        format!("http://192.168.10.64:8080/{}", $e).as_str()
     };
 }
 

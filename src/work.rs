@@ -299,7 +299,7 @@ mod tests {
                 "project_name" : "seed",
                 "module_name" : "seed",
                 "scm" : "git",
-                "source_url" : "ssh://git@gitlab.justsafe.com:8442/ht5.0/mdm.git",
+                "source_url" : "ssh://git@192.168.10.64:8442/ht5.0/mdm.git",
                 "channel" : "master",
                 "branch" : "device_provisioned",
                 "version_code" : 20121701,
