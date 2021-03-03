@@ -5,8 +5,6 @@ RUN apt-get update \
      &&  apt-get install lsb-release -y \
      &&  rm -rf /var/lib/apt/lists/*
 
-RUN echo 192.168.10.64 gitlab.justsafe.com >> /etc/hosts
-
 WORKDIR /app
 
 ADD config /app/config

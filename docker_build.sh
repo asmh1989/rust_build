@@ -21,7 +21,7 @@ env OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu/ OPENSSL_INCLUDE_DIR=/usr/local/in
 echo "build bmdm rust-build ..."
 
 echo "build docker"
-sudo docker build --no-cache -t 192.168.2.36:5000/rust_build . 
+sudo docker build -t 192.168.2.36:5000/rust_build . 
 echo "build docker end..."
 
 sudo docker push 192.168.2.36:5000/rust_build:latest
