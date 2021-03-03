@@ -11,4 +11,4 @@ ADD config /app/config
 
 ADD target/release/rust_build /app
 
-ENTRYPOINT ["/app/rust_build"]
+ENTRYPOINT ["/bin/sh", "-c" , "echo 192.168.10.64 gitlab.justsafe.com >> /etc/hosts && /app/rust_build"]

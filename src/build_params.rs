@@ -207,7 +207,7 @@ mod tests {
                 "project_name" : "seed",
                 "module_name" : "seed",
                 "scm" : "git",
-                "source_url" : "ssh://git@192.168.10.64:8442/ht5.0/mdm.git",
+                "source_url" : "ssh://git@gitlab.justsafe.com:8442/ht5.0/mdm.git",
                 "version_code" : 20111101,
                 "version_name" : "5.0.20201111r1",
                 "channel" : "master"
