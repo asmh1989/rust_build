@@ -1,4 +1,4 @@
-FROM asmh1989/android-sdk:update
+FROM 192.168.2.36:5000/android-sdk:update
 
 #install lsb-release for debian
 RUN apt-get update \
