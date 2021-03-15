@@ -1,7 +1,6 @@
 #!/bin/bash
 pwd=`pwd`
 
-#!/bin/bash
 if [[ -n $(git diff --stat)  ]]
 then
   echo '请先commit!!!'
