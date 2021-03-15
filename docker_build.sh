@@ -17,7 +17,12 @@ sed -i "s/^version = \"\([0-9.]*\)\"/version = \"\1$version\"/g" Cargo.toml
 
 
 echo " start build rust-build ..."
-env OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu/ OPENSSL_INCLUDE_DIR=/usr/local/include OPENSSL_STATIC=yes cargo build --release
+
+# 去除openssl依赖
+#env OPENSSL_LIB_DIR=/usr/lib/x86_64-linux-gnu/ OPENSSL_INCLUDE_DIR=/usr/local/include OPENSSL_STATIC=yes cargo build --release
+
+cargo build --release
+
 echo "build bmdm rust-build ..."
 
 echo "build docker"

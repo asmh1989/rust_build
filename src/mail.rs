@@ -1,16 +1,10 @@
 use bson::Bson;
 use chrono::Local;
-use lettre::{
-    message::{header, SinglePart},
-    transport::smtp::{
-        authentication::Credentials,
-        client::{Tls, TlsParameters},
-    },
-    Message, SmtpTransport, Transport,
-};
+
+use crate::result_err;
 use log::info;
-use native_tls::Protocol;
 use regex::Regex;
+use serde_json::json;
 
 use crate::{
     build_params::AppParams,
@@ -22,43 +16,19 @@ use crate::{
 async fn _email(mail: &str, title: &str, content: &str) -> Result<(), String> {
     info!(" start send email to {}", mail);
 
-    let email = Message::builder()
-        .from("AndroidBuild<androidbuild@justsafe.com>".parse().unwrap())
-        .to(mail.parse().unwrap())
-        .subject(title)
-        .singlepart(
-            SinglePart::builder()
-                .header(header::ContentType(
-                    "text/html; charset=utf8".parse().unwrap(),
-                ))
-                .body(String::from(content)),
-        )
-        .unwrap();
+    let client = reqwest::Client::new();
 
-    let creds = Credentials::new(
-        "androidbuild@justsafe.com".to_string(),
-        "Justsy123".to_string(),
-    );
+    let _ = client
+        .post(format!("http://192.168.2.36:9876/mail").as_str())
+        .json(&json!({
+            "mail":mail,
+            "title": title,
+            "content": content
+        }))
+        .send()
+        .await
+        .map_err(result_err!())?;
 
-    let tls = TlsParameters::builder("mail.justsafe.com".to_string())
-        .dangerous_accept_invalid_certs(true)
-        .dangerous_accept_invalid_hostnames(true)
-        .min_protocol_version(Protocol::Sslv3)
-        .build()
-        .unwrap();
-
-    // Open a remote connection to gmail using STARTTLS
-    let mailer = SmtpTransport::builder_dangerous("mail.justsafe.com")
-        .port(587)
-        .tls(Tls::Required(tls))
-        .credentials(creds)
-        .build();
-
-    // Send the email
-    match mailer.send(&email) {
-        Ok(_) => println!("Email sent successfully!"),
-        Err(e) => panic!("Could not send email: {:?}", e),
-    }
     Ok(())
 }
 
