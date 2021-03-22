@@ -180,7 +180,7 @@ pub struct AppParams2 {
     pub fid: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub operate: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing)]
     pub update_time: Option<DateTime>,
 }
 
