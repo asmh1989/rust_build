@@ -250,6 +250,7 @@ async fn main() -> std::io::Result<()> {
                         .route(web::post().to(http::MyRoute::build)),
                 )
                 .route("/app/query/{id}", web::get().to(http::MyRoute::query))
+                .route("/app/query", web::get().to(http::MyRoute::querys))
                 .route(
                     "/app/package/{id}.apk",
                     web::get().to(http::MyRoute::package),

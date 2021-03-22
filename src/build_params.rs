@@ -1,10 +1,18 @@
 use bson::DateTime;
 use log::info;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use url::Url;
 use uuid::Uuid;
 
 use std::collections::HashMap;
+
+/// Serializes a bson::DateTime as an ISO string.
+pub fn bson_datetime_as_iso_string<S: Serializer>(
+    val: &DateTime,
+    serializer: S,
+) -> Result<S::Ok, S::Error> {
+    serializer.serialize_str(&val.to_string())
+}
 
 use crate::{
     db::{Db, COLLECTION_BUILD},
@@ -25,7 +33,7 @@ pub enum Framework {
     Normal45,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum Scm {
     #[serde(rename = "git")]
     Git,
@@ -36,7 +44,7 @@ pub struct Version {
     pub project_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub module_name: Option<String>,
-    pub scm: Scm,
+    pub scm: Option<Scm>,
     pub source_url: Url,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub channel: Option<String>,
@@ -136,8 +144,9 @@ impl BuildStatus {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppParams {
-    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "_id", skip_serializing)]
     id: Option<bson::oid::ObjectId>,
+    #[serde(serialize_with = "bson_datetime_as_iso_string")]
     pub date: DateTime,
     pub build_id: Uuid,
     #[serde(flatten)]
@@ -246,7 +255,7 @@ mod tests {
         let params = result.unwrap();
         assert_eq!(params.version.project_name.unwrap(), "seed");
         assert_eq!(params.version.module_name.unwrap(), "seed");
-        assert_eq!(params.version.scm, Scm::Git);
+        assert_eq!(params.version.scm.unwrap(), Scm::Git);
         assert_eq!(params.configs.framework, Framework::Normal);
     }
 }

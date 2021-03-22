@@ -10,6 +10,13 @@ sudo apt install openssl libssl-devel
 
 ### CHANGELOG
 
+#### 0.4.0
+
+- 分离邮件发送功能
+- update deps
+- 新增完整的 query 查询接口
+- 可以忽略 scm 参数
+
 #### 0.3.0
 
 - `reqwest` 升级到`0.11`

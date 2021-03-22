@@ -1,7 +1,13 @@
-use actix_web::{web, HttpResponse, Responder};
-use bson::Bson;
+use std::sync::{Arc, Mutex};
+
+use actix_web::{
+    web::{self},
+    HttpResponse, Responder,
+};
+use bson::{doc, Bson};
 use build_params::CODE_ILLEGAL;
 use log::info;
+use mongodb::options::FindOptions;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
 
@@ -22,6 +28,13 @@ pub struct QueryResponse {
     pub detail: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "downloadPath")]
     pub download_path: Option<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct QueryInfo {
+    pub status: Option<i64>,
+    pub page: Option<i64>,
+    pub page_size: Option<i64>,
 }
 
 impl QueryResponse {
@@ -61,6 +74,41 @@ impl MyRoute {
         crate::redis::Redis::publish(BUILD_CHANNEL, &id.to_string()).await;
 
         response_ok(json!({ "id": id }))
+    }
+
+    pub async fn querys(info: web::Query<QueryInfo>) -> impl Responder {
+        info!("querys info {:?} ... ", info);
+        let page = info.page.unwrap_or(0);
+        let page_size = info.page_size.unwrap_or(20);
+        let status = info.status;
+
+        let find_options = FindOptions::builder()
+            .sort(doc! { "date": -1 })
+            .limit(page_size)
+            .skip(page * page_size)
+            .build();
+
+        let vec: Arc<Mutex<Vec<AppParams>>> = Arc::new(Mutex::new(Vec::new()));
+
+        let result = Db::find(
+            COLLECTION_BUILD,
+            status.map(|f| doc! {"code":{"$eq": f}}),
+            find_options,
+            &|app| vec.lock().unwrap().push(app),
+        )
+        .await;
+
+        if result.is_err() {
+            response_error(format!("{:?}", result.err()))
+        } else {
+            let mut data = Vec::new();
+            for app in vec.lock().unwrap().iter() {
+                data.push(serde_json::to_value(app).unwrap());
+            }
+            let v = serde_json::to_value(data);
+
+            response_ok(v.unwrap())
+        }
     }
 
     pub async fn query(web::Path(id): web::Path<String>) -> impl Responder {

@@ -36,7 +36,7 @@ pub fn get_log_file(build_id: Uuid) -> String {
 pub fn fetch_source(app: &AppParams) -> Result<(), String> {
     let url = app.params.version.source_url.clone();
 
-    if Scm::Git == app.params.version.scm {
+    if Scm::Git == app.params.version.scm.clone().unwrap_or(Scm::Git) {
         utils::clone_src(
             url.as_str(),
             &get_source_path(app.build_id),
