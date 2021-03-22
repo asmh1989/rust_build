@@ -163,6 +163,27 @@ pub struct AppParams {
     pub update_time: Option<DateTime>,
 }
 
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AppParams2 {
+    #[serde(rename = "_id", skip_serializing)]
+    id: Option<bson::oid::ObjectId>,
+    #[serde(serialize_with = "bson_datetime_as_iso_string")]
+    pub date: DateTime,
+    pub build_id: Uuid,
+    #[serde(flatten)]
+    pub status: BuildStatus,
+    pub params: BuildParams,
+    pub build_time: i16,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub email: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fid: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub operate: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub update_time: Option<DateTime>,
+}
+
 impl AppParams {
     pub fn new(params: BuildParams, operate: &str, email: Option<String>) -> Self {
         let date = DateTime(chrono::Utc::now());

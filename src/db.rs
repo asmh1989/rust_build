@@ -8,11 +8,10 @@ use mongodb::{
     Client,
 };
 use once_cell::sync::OnceCell;
+use serde::de::DeserializeOwned;
 use tokio_stream::StreamExt;
 
 use std::result::Result;
-
-use crate::build_params::AppParams;
 
 #[macro_export]
 macro_rules! filter_build_id {
@@ -35,12 +34,15 @@ impl Db {
         INSTANCE.get().expect("db need init first")
     }
 
-    pub async fn find(
+    pub async fn find<T>(
         table: &str,
         filter: impl Into<Option<Document>>,
         options: impl Into<Option<FindOptions>>,
-        call_back: &dyn Fn(AppParams),
-    ) -> Result<(), Error> {
+        call_back: &dyn Fn(T),
+    ) -> Result<(), Error>
+    where
+        T: DeserializeOwned,
+    {
         let client = Db::get_instance();
         let db = client.database(TABLE_NAME);
         let collection = db.collection(table);
@@ -51,7 +53,7 @@ impl Db {
         while let Some(result) = cursor.next().await {
             match result {
                 Ok(document) => {
-                    let result = bson::from_bson::<AppParams>(Bson::Document(document));
+                    let result = bson::from_bson::<T>(Bson::Document(document));
                     match result {
                         Ok(app) => call_back(app),
                         Err(err) => {

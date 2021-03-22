@@ -5,7 +5,7 @@ use actix_web::{
     HttpResponse, Responder,
 };
 use bson::{doc, Bson};
-use build_params::CODE_ILLEGAL;
+use build_params::{AppParams2, CODE_ILLEGAL};
 use log::info;
 use mongodb::options::FindOptions;
 use serde::{Deserialize, Serialize};
@@ -88,7 +88,7 @@ impl MyRoute {
             .skip(page * page_size)
             .build();
 
-        let vec: Arc<Mutex<Vec<AppParams>>> = Arc::new(Mutex::new(Vec::new()));
+        let vec: Arc<Mutex<Vec<AppParams2>>> = Arc::new(Mutex::new(Vec::new()));
 
         let result = Db::find(
             COLLECTION_BUILD,
@@ -103,7 +103,7 @@ impl MyRoute {
         } else {
             let mut data = Vec::new();
             for app in vec.lock().unwrap().iter() {
-                data.push(serde_json::to_value(app).unwrap());
+                data.push(serde_json::to_value(app).unwrap())
             }
             let v = serde_json::to_value(data);
 
