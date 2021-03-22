@@ -144,9 +144,9 @@ impl BuildStatus {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppParams {
-    #[serde(rename = "_id", skip_serializing)]
+    #[serde(rename = "_id", skip_serializing_if = "Option::is_none")]
     id: Option<bson::oid::ObjectId>,
-    #[serde(serialize_with = "bson_datetime_as_iso_string")]
+    // #[serde(serialize_with = "bson_datetime_as_iso_string")]
     pub date: DateTime,
     pub build_id: Uuid,
     #[serde(flatten)]
