@@ -12,6 +12,9 @@ pub struct Opt {
     #[structopt(long = "ding", help = "钉钉通知")]
     pub ding: bool,
 
+    #[structopt(long = "no-upload", help = "打包结果不上传到文件服务器")]
+    pub no_upload: bool,
+
     #[structopt(long = "manager-build", help = "打包管理服务, 同时进行打包任务")]
     pub manager_build: bool,
 

@@ -26,6 +26,10 @@ macro_rules! get_upload_url {
 pub async fn upload(path: &str, file_name: String) -> Result<String, String> {
     info!("upload file {} ...", path);
 
+    if crate::config::Config::enable_no_upload() {
+        return Ok("test".to_string());
+    }
+
     if !crate::utils::file_exist(path) {
         return Err(format!("{} not exist!!", path));
     }

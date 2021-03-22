@@ -180,6 +180,11 @@ async fn main() -> std::io::Result<()> {
         .unwrap()
         .set_ding(opt.ding);
 
+    config::Config::get_instance()
+        .lock()
+        .unwrap()
+        .set_no_upload(opt.no_upload);
+
     if !opt.cache_path.is_empty() {
         config::Config::get_instance()
             .lock()

@@ -10,6 +10,7 @@ pub struct Config {
     pub cache_home: String,
     pub building: bool,
     pub ding: bool,
+    pub no_upload: bool,
     pub ip: String,
 }
 
@@ -40,6 +41,7 @@ impl Config {
                         cache_home: format!("{}/.mdm_build", env::var("HOME").unwrap()).to_string(),
                         building: false,
                         ding: false,
+                        no_upload: false,
                         ip: whoami::hostname(),
                     }))
                 })
@@ -67,6 +69,10 @@ impl Config {
         self.ding = ding;
     }
 
+    pub fn set_no_upload(&mut self, no_upload: bool) {
+        self.no_upload = no_upload;
+    }
+
     pub fn cache_home() -> String {
         Config::get_instance().lock().unwrap().cache_home.clone()
     }
@@ -81,6 +87,10 @@ impl Config {
 
     pub fn enable_ding() -> bool {
         Config::get_instance().lock().unwrap().ding
+    }
+
+    pub fn enable_no_upload() -> bool {
+        Config::get_instance().lock().unwrap().no_upload
     }
 
     pub fn ip() -> String {
